@@ -1,0 +1,81 @@
+services:
+    app:
+        container_name: app-production
+        build:
+            context: .
+            dockerfile: ./docker/common/php-fpm/Dockerfile
+            target: production
+            args:
+                PHP_BUILD_IMAGE: ${PHP_BUILD_IMAGE:-mirror.gcr.io/library/php:8.4-cli}
+                PHP_RUNTIME_IMAGE: ${PHP_RUNTIME_IMAGE:-mirror.gcr.io/library/php:8.4-apache}
+        restart: unless-stopped
+        volumes:
+            - laravel-storage-production:/var/www/storage
+            - laravel-public-assets:/var/www/public/build
+        env_file:
+            - .env
+        environment:
+            DB_CONNECTION: ${DB_CONNECTION:-mysql}
+            # DB_HOST=127.0.0.1 in .env is for PHP on your machine; inside the container use the Compose network hostname.
+            DB_HOST: ${DOCKER_DB_HOST:-mysql}
+            DB_PORT: ${DB_PORT:-3306}
+            DB_DATABASE: ${DB_DATABASE:-app}
+            DB_USERNAME: ${DB_USERNAME:-laravel}
+            DB_PASSWORD: ${DB_PASSWORD:-secret}
+            DB_URL: ${DB_URL:-}
+            REDIS_HOST: ${DOCKER_REDIS_HOST:-redis}
+            REDIS_PORT: ${REDIS_PORT:-6379}
+            REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+        networks:
+            - laravel-production
+        ports:
+            - "${APP_PORT:-8011}:80"
+        healthcheck:
+            test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1/ >/dev/null || exit 1']
+            interval: 10s
+            timeout: 5s
+            retries: 3
+        depends_on:
+            mysql:
+                condition: service_healthy
+
+    mysql:
+        container_name: mysql-production
+        image: mysql:8.4
+        restart: unless-stopped
+        ports:
+            - "${MYSQL_PORT:-8012}:3306"
+        environment:
+            MYSQL_DATABASE: ${DB_DATABASE:-app}
+            MYSQL_USER: ${DB_USERNAME:-laravel}
+            MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-secret}
+        volumes:
+            - mysql-data-production:/var/lib/mysql
+        networks:
+            - laravel-production
+        healthcheck:
+            test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
+    redis:
+        container_name: redis-production
+        image: redis:alpine
+        restart: unless-stopped
+        networks:
+            - laravel-production
+        healthcheck:
+            test: ['CMD', 'redis-cli', 'ping']
+            interval: 10s
+            timeout: 5s
+            retries: 3
+
+networks:
+    laravel-production:
+
+volumes:
+    mysql-data-production:
+    laravel-storage-production:
+    laravel-public-assets:
