@@ -101,11 +101,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # curl — HEALTHCHECK hits localhost; also handy for manual checks.
 
 # Ship startup script (migrations, Laravel caches, then exec CMD).
-COPY ./docker/production/php-fpm/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Apache vhost: DocumentRoot public/, AllowOverride for Laravel .htaccess.
-COPY ./docker/production/apache/000-default.conf /etc/apache2/sites-available/000-default.conf
+COPY ./docker/000-default.conf /etc/apache2/sites-available/000-default.conf
 RUN a2enmod rewrite
 
 # Seed copy of storage skeleton; entrypoint copies into volume if /var/www/storage is empty.
