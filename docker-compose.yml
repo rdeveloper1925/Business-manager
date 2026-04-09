@@ -1,6 +1,6 @@
 services:
     app:
-        container_name: app-production
+        container_name: bm-app
         build:
             context: .
             dockerfile: ./docker/Dockerfile
@@ -10,8 +10,8 @@ services:
                 PHP_RUNTIME_IMAGE: ${PHP_RUNTIME_IMAGE:-mirror.gcr.io/library/php:8.4-apache}
         restart: unless-stopped
         volumes:
-            - laravel-storage-production:/var/www/storage
-            - laravel-public-assets:/var/www/public/build
+            - bm-app-storage:/var/www/storage
+            - bm-app-assets:/var/www/public/build
         env_file:
             - .env
         environment:
@@ -27,7 +27,7 @@ services:
             REDIS_PORT: ${REDIS_PORT:-6379}
             REDIS_PASSWORD: ${REDIS_PASSWORD:-}
         networks:
-            - laravel-production
+            - bm-network
         ports:
             - "${APP_PORT:-8011}:80"
         healthcheck:
@@ -40,7 +40,7 @@ services:
                 condition: service_healthy
 
     mysql:
-        container_name: mysql-production
+        container_name: bm-db
         image: mysql:8.4
         restart: unless-stopped
         ports:
@@ -51,9 +51,9 @@ services:
             MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
             MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-secret}
         volumes:
-            - mysql-data-production:/var/lib/mysql
+            - bm-db-store:/var/lib/mysql
         networks:
-            - laravel-production
+            - bm-network
         healthcheck:
             test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
             interval: 10s
@@ -61,11 +61,11 @@ services:
             retries: 5
 
     redis:
-        container_name: redis-production
+        container_name: bm-redis
         image: redis:alpine
         restart: unless-stopped
         networks:
-            - laravel-production
+            - bm-network
         healthcheck:
             test: ['CMD', 'redis-cli', 'ping']
             interval: 10s
@@ -73,9 +73,9 @@ services:
             retries: 3
 
 networks:
-    laravel-production:
+    bm-network:
 
 volumes:
-    mysql-data-production:
-    laravel-storage-production:
-    laravel-public-assets:
+    bm-db-store:
+    bm-app-storage:
+    bm-app-assets:
