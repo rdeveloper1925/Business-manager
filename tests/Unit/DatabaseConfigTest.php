@@ -6,16 +6,20 @@ use Tests\TestCase;
 
 class DatabaseConfigTest extends TestCase
 {
-    public function test_only_mysql_database_connection_is_configured(): void
+    public function test_mysql_and_sqlite_database_connections_are_configured(): void
     {
         $connections = config('database.connections');
 
         $this->assertIsArray($connections);
-        $this->assertSame(['mysql'], array_keys($connections));
+        $this->assertArrayHasKey('mysql', $connections);
+        $this->assertArrayHasKey('sqlite', $connections);
     }
 
-    public function test_default_database_connection_is_mysql(): void
+    public function test_default_database_connection_follows_db_connection_environment_variable(): void
     {
-        $this->assertSame('mysql', config('database.default'));
+        $this->assertSame(
+            env('DB_CONNECTION', 'mysql'),
+            config('database.default')
+        );
     }
 }
