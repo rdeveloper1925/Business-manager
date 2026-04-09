@@ -166,6 +166,14 @@
     body {
         @apply bg-background text-foreground;
     }
+
+    button:not(:disabled),
+    [role='button']:not([aria-disabled='true']),
+    input[type='button']:not(:disabled),
+    input[type='submit']:not(:disabled),
+    input[type='reset']:not(:disabled) {
+        @apply cursor-pointer;
+    }
 }
 
 @keyframes landing-fade-up {
@@ -227,6 +235,12 @@
 
     .dark .landing-tag {
         color: var(--landing-primary);
+    }
+
+    .landing-btn-primary,
+    .landing-btn-accent,
+    .landing-btn-secondary {
+        cursor: pointer;
     }
 
     .landing-btn-primary {

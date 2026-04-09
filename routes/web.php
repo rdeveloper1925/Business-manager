@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\CustomerController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'LandingPages/index')->name('home');
@@ -9,6 +10,7 @@ Route::inertia('/demo', 'LandingPages/demo')->name('landing.demo');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
+    Route::resource('customers', CustomerController::class)->except(['create', 'edit']);
 });
 
 require __DIR__.'/settings.php';
