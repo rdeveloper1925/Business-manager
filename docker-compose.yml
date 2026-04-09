@@ -29,7 +29,7 @@ services:
         networks:
             - bm-network
         ports:
-            - "${APP_PORT:-8011}:80"
+            - "${APP_PORT:-8013}:80"
         healthcheck:
             test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1/ >/dev/null || exit 1']
             interval: 10s
@@ -44,7 +44,7 @@ services:
         image: mysql:8.4
         restart: unless-stopped
         ports:
-            - "${MYSQL_PORT:-8012}:3306"
+            - "${MYSQL_PORT:-8014}:3306"
         environment:
             MYSQL_DATABASE: ${DB_DATABASE:-app}
             MYSQL_USER: ${DB_USERNAME:-laravel}
