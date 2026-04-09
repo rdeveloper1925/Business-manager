@@ -11,8 +11,8 @@ class DockerProductionSetupTest extends TestCase
         $root = dirname(__DIR__, 2);
         $this->assertFileExists($root.'/docker-compose.yml');
         $this->assertFileExists($root.'/.dockerignore');
-        $this->assertFileExists($root.'/docker/common/php-fpm/Dockerfile');
-        $this->assertFileExists($root.'/docker/production/php-fpm/entrypoint.sh');
-        $this->assertFileExists($root.'/docker/production/apache/000-default.conf');
+        $this->assertFileExists($root.'/docker/Dockerfile');
+        $this->assertFileExists($root.'/docker/entrypoint.sh');
+        $this->assertFileExists($root.'/docker/000-default.conf');
     }
 }

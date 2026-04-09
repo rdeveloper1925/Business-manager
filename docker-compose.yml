@@ -3,7 +3,7 @@ services:
         container_name: app-production
         build:
             context: .
-            dockerfile: ./docker/common/php-fpm/Dockerfile
+            dockerfile: ./docker/Dockerfile
             target: production
             args:
                 PHP_BUILD_IMAGE: ${PHP_BUILD_IMAGE:-mirror.gcr.io/library/php:8.4-cli}
