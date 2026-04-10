@@ -95,12 +95,14 @@ class CustomerTest extends TestCase
         $user = User::factory()->create();
         Customer::factory()->create([
             'full_name' => 'Keep Me',
-            'phone_number' => '555-0000',
+            'phone_number' => '(555)-000-0001',
+            'phone_country_name' => 'United States',
             'email' => 'keep@example.com',
         ]);
         Customer::factory()->create([
             'full_name' => 'Other Person',
-            'phone_number' => '555-9999',
+            'phone_number' => '(555)-999-9999',
+            'phone_country_name' => 'United States',
             'email' => 'findme@example.com',
         ]);
 
@@ -144,7 +146,8 @@ class CustomerTest extends TestCase
             ->post(route('customers.store'), [
                 'full_name' => 'Pat Example',
                 'organization_name' => 'Acme Inc',
-                'phone_number' => '555-0100',
+                'phone_country_name' => 'United States',
+                'phone_number' => '(555)-010-0100',
                 'email' => 'pat@example.com',
                 'address' => '1 Main St',
                 'tax_id' => '12-3456789',
@@ -162,7 +165,8 @@ class CustomerTest extends TestCase
             ->patch(route('customers.update', $customer), [
                 'full_name' => 'Pat Updated',
                 'organization_name' => 'Acme Inc',
-                'phone_number' => '555-0100',
+                'phone_country_name' => 'United Kingdom',
+                'phone_number' => '07700 900123',
                 'email' => 'pat@example.com',
                 'address' => '2 Oak Ave',
                 'tax_id' => '12-3456789',
@@ -172,6 +176,8 @@ class CustomerTest extends TestCase
         $customer->refresh();
         $this->assertSame('Pat Updated', $customer->full_name);
         $this->assertSame('2 Oak Ave', $customer->address);
+        $this->assertSame('United Kingdom', $customer->phone_country_name);
+        $this->assertSame('07700 900123', $customer->phone_number);
 
         $this->actingAs($user)
             ->delete(route('customers.destroy', $customer))
@@ -180,5 +186,56 @@ class CustomerTest extends TestCase
         $this->assertSoftDeleted('customers', [
             'customer_id' => $customer->customer_id,
         ]);
+    }
+
+    public function test_store_rejects_malformed_nanp_phone(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('customers.store'), [
+                'full_name' => 'Bad Phone',
+                'organization_name' => null,
+                'phone_country_name' => 'United States',
+                'phone_number' => '555-010-0100',
+                'email' => 'badphone@example.com',
+                'address' => '1 Main St',
+                'tax_id' => null,
+            ])
+            ->assertSessionHasErrors('phone_number');
+    }
+
+    public function test_store_rejects_unknown_phone_country_name(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('customers.store'), [
+                'full_name' => 'Bad Country',
+                'organization_name' => null,
+                'phone_country_name' => 'Atlantis',
+                'phone_number' => '(555)-010-0100',
+                'email' => 'badcountry@example.com',
+                'address' => '1 Main St',
+                'tax_id' => null,
+            ])
+            ->assertSessionHasErrors('phone_country_name');
+    }
+
+    public function test_store_rejects_international_phone_with_too_few_digits(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->post(route('customers.store'), [
+                'full_name' => 'Short Intl',
+                'organization_name' => null,
+                'phone_country_name' => 'United Kingdom',
+                'phone_number' => '12345',
+                'email' => 'shortintl@example.com',
+                'address' => '1 Main St',
+                'tax_id' => null,
+            ])
+            ->assertSessionHasErrors('phone_number');
     }
 }

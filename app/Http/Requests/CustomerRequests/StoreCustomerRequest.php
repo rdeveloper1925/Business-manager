@@ -3,6 +3,7 @@
 namespace App\Http\Requests\CustomerRequests;
 
 use App\Models\Customer;
+use App\Support\PhoneCountry;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -27,7 +28,8 @@ class StoreCustomerRequest extends FormRequest
         return [
             'full_name' => ['required', 'string', 'max:255'],
             'organization_name' => ['nullable', 'string', 'max:255'],
-            'phone_number' => ['required', 'string', 'max:50'],
+            'phone_country_name' => ['required', 'string', 'max:255', Rule::in(PhoneCountry::allowedNames())],
+            'phone_number' => PhoneCountry::rulesForPhoneNumber($this->input('phone_country_name')),
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', Rule::unique('customers', 'email')],
             'address' => ['required', 'string'],
             'tax_id' => ['nullable', 'string', 'max:255'],

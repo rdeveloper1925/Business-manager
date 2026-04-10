@@ -20,7 +20,8 @@ class CustomerFactory extends Factory
         return [
             'full_name' => fake()->name(),
             'organization_name' => fake()->optional()->company(),
-            'phone_number' => fake()->phoneNumber(),
+            'phone_country_name' => 'United States',
+            'phone_number' => '('.fake()->numerify('###').')-'.fake()->numerify('###').'-'.fake()->numerify('####'),
             'email' => fake()->unique()->safeEmail(),
             'address' => fake()->address(),
             'tax_id' => fake()->optional()->numerify('##-#######'),

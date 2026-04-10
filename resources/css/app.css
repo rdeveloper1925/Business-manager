@@ -283,3 +283,17 @@
         animation: landing-float 5.2s ease-in-out infinite;
     }
 }
+
+@layer utilities {
+    /**
+     * Force emoji-capable fonts for regional-indicator flag sequences.
+     * Primary UI fonts (e.g. Instrument Sans) can otherwise swallow codepoints and show nothing.
+     */
+    .font-emoji-flag {
+        font-family:
+            "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Noto Emoji",
+            sans-serif;
+        font-style: normal;
+        font-variant-emoji: emoji;
+    }
+}

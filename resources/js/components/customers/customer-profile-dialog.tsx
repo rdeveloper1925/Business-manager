@@ -1,5 +1,6 @@
 import {
     Building2,
+    Globe,
     Hash,
     Mail,
     MapPin,
@@ -21,6 +22,12 @@ import {
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
 import { useInitials } from '@/hooks/use-initials';
+import {
+    findPhoneCountryByName,
+    flagEmojiFromIso2,
+    nationalDigitsOnly,
+    telHref,
+} from '@/lib/phone-countries';
 import { cn } from '@/lib/utils';
 import type { Customer } from '@/types/customer';
 
@@ -152,17 +159,62 @@ export function CustomerProfileDialog({
                                 display(customer.email)
                             )}
                         </ProfileField>
+                        <ProfileField icon={Globe} label="Country">
+                            {(() => {
+                                const row = findPhoneCountryByName(
+                                    customer.phone_country_name,
+                                );
+                                const flag = row
+                                    ? flagEmojiFromIso2(row.iso2)
+                                    : '';
+
+                                return (
+                                    <span className="inline-flex flex-wrap items-center gap-2">
+                                        {flag ? (
+                                            <span
+                                                aria-hidden
+                                                className="font-emoji-flag text-foreground text-lg leading-none"
+                                            >
+                                                {flag}
+                                            </span>
+                                        ) : null}
+                                        <span className="font-medium">
+                                            {display(customer.phone_country_name)}
+                                        </span>
+                                        {row ? (
+                                            <span className="text-muted-foreground font-mono text-xs">
+                                                {row.dialCode}
+                                            </span>
+                                        ) : null}
+                                    </span>
+                                );
+                            })()}
+                        </ProfileField>
                         <ProfileField icon={Phone} label="Phone">
-                            {customer.phone_number ? (
-                                <a
-                                    href={`tel:${customer.phone_number.replace(/\s+/g, '')}`}
-                                    className="text-primary font-medium underline-offset-4 hover:underline"
-                                >
-                                    {customer.phone_number}
-                                </a>
-                            ) : (
-                                display(customer.phone_number)
-                            )}
+                            {(() => {
+                                const row = findPhoneCountryByName(
+                                    customer.phone_country_name,
+                                );
+                                const dialDigits = row
+                                    ? nationalDigitsOnly(row.dialCode)
+                                    : '';
+                                const national = nationalDigitsOnly(
+                                    customer.phone_number,
+                                );
+
+                                if (!customer.phone_number) {
+                                    return display(customer.phone_number);
+                                }
+
+                                return (
+                                    <a
+                                        href={telHref(dialDigits, national)}
+                                        className="text-primary font-medium underline-offset-4 hover:underline"
+                                    >
+                                        {customer.phone_number}
+                                    </a>
+                                );
+                            })()}
                         </ProfileField>
                         <ProfileField icon={Building2} label="Organization">
                             {display(customer.organization_name)}

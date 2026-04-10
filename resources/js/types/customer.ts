@@ -8,6 +8,7 @@ export type Customer = {
     customer_id: number;
     full_name: string;
     organization_name: string | null;
+    phone_country_name: string;
     phone_number: string;
     email: string;
     address: string;

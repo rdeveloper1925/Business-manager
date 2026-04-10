@@ -1,0 +1,103 @@
+<?php
+
+namespace App\Support;
+
+use InvalidArgumentException;
+
+class PhoneCountry
+{
+    private const DATA_PATH = 'resources/js/data/phone-countries.json';
+
+    /** @var list<array{name: string, iso2: string, dialCode: string}>|null */
+    private static ?array $cached = null;
+
+    /**
+     * @return list<array{name: string, iso2: string, dialCode: string}>
+     */
+    public static function all(): array
+    {
+        if (self::$cached !== null) {
+            return self::$cached;
+        }
+
+        $path = base_path(self::DATA_PATH);
+        $raw = file_get_contents($path);
+        if ($raw === false) {
+            throw new InvalidArgumentException('Phone countries data file is missing.');
+        }
+
+        $decoded = json_decode($raw, true);
+        if (! is_array($decoded)) {
+            throw new InvalidArgumentException('Phone countries data file is invalid.');
+        }
+
+        /** @var list<array{name: string, iso2: string, dialCode: string}> $decoded */
+        self::$cached = $decoded;
+
+        return self::$cached;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function allowedNames(): array
+    {
+        return array_map(fn (array $row): string => $row['name'], self::all());
+    }
+
+    /**
+     * @return array{name: string, iso2: string, dialCode: string}|null
+     */
+    public static function findByName(?string $name): ?array
+    {
+        if ($name === null || $name === '') {
+            return null;
+        }
+
+        foreach (self::all() as $row) {
+            if ($row['name'] === $name) {
+                return $row;
+            }
+        }
+
+        return null;
+    }
+
+    public static function usesNanpMask(?string $countryName): bool
+    {
+        $row = self::findByName($countryName);
+
+        return $row !== null && $row['dialCode'] === '+1';
+    }
+
+    public static function dialDigits(?string $countryName): string
+    {
+        $row = self::findByName($countryName);
+        if ($row === null) {
+            return '';
+        }
+
+        return preg_replace('/\D+/', '', $row['dialCode']) ?? '';
+    }
+
+    /**
+     * @return list<\Closure(string, mixed, \Closure): void|string>
+     */
+    public static function rulesForPhoneNumber(?string $countryName): array
+    {
+        $base = ['required', 'string', 'max:50'];
+
+        if (self::usesNanpMask($countryName)) {
+            return array_merge($base, ['regex:/^\(\d{3}\)-\d{3}-\d{4}$/']);
+        }
+
+        return array_merge($base, [
+            function (string $attribute, mixed $value, \Closure $fail): void {
+                $digits = preg_replace('/\D/', '', (string) $value);
+                if (strlen($digits) < 7) {
+                    $fail(__('The :attribute must contain at least 7 digits.'));
+                }
+            },
+        ]);
+    }
+}
