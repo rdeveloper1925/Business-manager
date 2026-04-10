@@ -122,7 +122,7 @@ RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 # Application code from builder (vendor, app, resources, public without fresh build dir yet).
 COPY --from=builder /var/www /var/www
 
-# Overlay compiled Vite assets into public/build (volume in Compose can override at runtime).
+# Overlay compiled Vite assets into public/build (serve from image; avoid a named volume here).
 COPY --from=assets /var/www/public/build /var/www/public/build
 
 WORKDIR /var/www
