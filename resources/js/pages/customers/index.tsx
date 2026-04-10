@@ -23,6 +23,7 @@ import type {
 const CUSTOMER_STORE_ERROR_KEYS = [
     'full_name',
     'organization_name',
+    'phone_country_name',
     'phone_number',
     'email',
     'address',
