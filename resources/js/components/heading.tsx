@@ -12,14 +12,14 @@ export default function Heading({
             <h2
                 className={
                     variant === 'small'
-                        ? 'mb-0.5 text-base font-medium'
-                        : 'text-xl font-semibold tracking-tight'
+                        ? 'landing-title mb-0.5 text-base font-medium'
+                        : 'landing-title text-xl font-semibold tracking-tight'
                 }
             >
                 {title}
             </h2>
             {description && (
-                <p className="text-sm text-muted-foreground">{description}</p>
+                <p className="landing-copy text-sm">{description}</p>
             )}
         </header>
     );
