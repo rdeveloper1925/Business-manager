@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\Parts;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -28,6 +30,8 @@ class AppServiceProvider extends ServiceProvider
         $this->restrictDatabaseToMysql();
         $this->configureUrlScheme();
         $this->configureDefaults();
+
+        Route::bind('part', fn (string $value): Parts => Parts::whereKey($value)->firstOrFail());
     }
 
     /**

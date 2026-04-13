@@ -6,13 +6,13 @@ on:
       - develop
       - main
       - master
-      - workos
+      - staging
   pull_request:
     branches:
       - develop
       - main
       - master
-      - workos
+      - staging
 
 permissions:
   contents: write

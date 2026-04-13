@@ -2,6 +2,7 @@ import { Link } from '@inertiajs/react';
 import { LayoutGrid, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavDataLoader } from '@/components/nav-data-loader';
+import { NavInventory } from '@/components/nav-inventory';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import {
@@ -47,6 +48,7 @@ export function AppSidebar() {
 
             <SidebarContent>
                 <NavMain items={mainNavItems} />
+                <NavInventory />
                 <NavDataLoader />
             </SidebarContent>
 
