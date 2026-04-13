@@ -63,6 +63,31 @@ class PhoneCountry
         return null;
     }
 
+    public static function defaultName(): string
+    {
+        return 'Canada';
+    }
+
+    /**
+     * Canonical catalog name when the CSV value matches a row; otherwise {@see defaultName()}.
+     *
+     * @param  mixed  $raw  Typically string|null from CSV cells
+     */
+    public static function resolveNameForImport(mixed $raw): string
+    {
+        $trimmed = is_string($raw) ? trim($raw) : '';
+
+        if ($trimmed === '') {
+            return self::defaultName();
+        }
+
+        if (self::findByName($trimmed) !== null) {
+            return $trimmed;
+        }
+
+        return self::defaultName();
+    }
+
     public static function usesNanpMask(?string $countryName): bool
     {
         $row = self::findByName($countryName);

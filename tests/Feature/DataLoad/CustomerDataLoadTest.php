@@ -148,6 +148,47 @@ class CustomerDataLoadTest extends TestCase
         ]);
     }
 
+    public function test_sync_import_defaults_unknown_phone_country_to_canada_and_nanp_rules(): void
+    {
+        $user = User::factory()->create();
+
+        $headers = implode(',', CustomerLoadService::expectedHeaders());
+        $csv = $headers."\nPat Doe,Co,Not A Real Country,(416)-555-0100,pat@example.com,1 St,";
+        $file = UploadedFile::fake()->createWithContent('unknown-country.csv', $csv);
+
+        $this->actingAs($user)
+            ->postJson(route('data-load.customers.upload'), [
+                'file' => $file,
+            ])
+            ->assertOk();
+
+        $this->assertDatabaseHas('customers', [
+            'email' => 'pat@example.com',
+            'phone_country_name' => 'Canada',
+            'phone_number' => '(416)-555-0100',
+        ]);
+    }
+
+    public function test_sync_import_defaults_blank_phone_country_to_canada(): void
+    {
+        $user = User::factory()->create();
+
+        $headers = implode(',', CustomerLoadService::expectedHeaders());
+        $csv = $headers."\nAlex Lee,Org,,(604)-555-0199,alex@example.com,2 Ave,";
+        $file = UploadedFile::fake()->createWithContent('blank-country.csv', $csv);
+
+        $this->actingAs($user)
+            ->postJson(route('data-load.customers.upload'), [
+                'file' => $file,
+            ])
+            ->assertOk();
+
+        $this->assertDatabaseHas('customers', [
+            'email' => 'alex@example.com',
+            'phone_country_name' => 'Canada',
+        ]);
+    }
+
     public function test_status_returns_forbidden_for_another_users_import(): void
     {
         $userA = User::factory()->create();

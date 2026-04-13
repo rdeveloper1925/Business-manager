@@ -5,7 +5,6 @@ namespace App\Services\DataLoad;
 use App\Jobs\LoadCustomersFromCsvJob;
 use App\Support\PhoneCountry;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -95,16 +94,18 @@ class CustomerLoadService
     /**
      * @param  array<string, mixed>  $data
      */
-    public static function validateRowData(array $data, int $lineNumber): void
+    public static function validateRowData(array &$data, int $lineNumber): void
     {
-        $countryName = isset($data['phone_country_name']) && is_string($data['phone_country_name'])
-            ? $data['phone_country_name']
-            : null;
+        $data['phone_country_name'] = PhoneCountry::resolveNameForImport(
+            $data['phone_country_name'] ?? null,
+        );
+
+        $countryName = $data['phone_country_name'];
 
         $validator = Validator::make($data, [
             'full_name' => ['required', 'string', 'max:255'],
             'organization_name' => ['nullable', 'string', 'max:255'],
-            'phone_country_name' => ['required', 'string', 'max:255', Rule::in(PhoneCountry::allowedNames())],
+            'phone_country_name' => ['required', 'string', 'max:255'],
             'phone_number' => PhoneCountry::rulesForPhoneNumber($countryName),
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255'],
             'address' => ['required', 'string'],
