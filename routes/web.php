@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DataLoaderController;
-use App\Http\Controllers\TestPages\WebsocketTestController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'LandingPages/index')->name('home');
@@ -18,9 +17,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('data-load/customers/template', [DataLoaderController::class, 'customersTemplate'])->name('data-load.customers.template');
     Route::post('data-load/customers', [DataLoaderController::class, 'customersUpload'])->name('data-load.customers.upload');
     Route::get('data-load/status/{importId}', [DataLoaderController::class, 'status'])->name('data-load.status');
-
-    Route::get('tests/ws', [WebsocketTestController::class, 'show'])->name('tests.ws');
-    Route::post('tests/ws/emit', [WebsocketTestController::class, 'emit'])->name('tests.ws.emit');
 });
 
 require __DIR__.'/settings.php';

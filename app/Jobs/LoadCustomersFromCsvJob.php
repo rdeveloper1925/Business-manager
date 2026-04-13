@@ -14,7 +14,11 @@ class LoadCustomersFromCsvJob implements ShouldQueue
 {
     use Queueable;
 
+    private const CHUNK_SIZE = 100;
+
     public int $timeout = 300;
+
+    private ?string $lastBroadcastSignature = null;
 
     public function __construct(
         public string $importId,
@@ -33,10 +37,9 @@ class LoadCustomersFromCsvJob implements ShouldQueue
                 'total' => 0,
                 'rows_loaded' => 0,
                 'message' => null,
-            ]);
+            ], forceBroadcast: true);
 
-            $rowsToInsert = $this->collectValidatedRows();
-            $total = count($rowsToInsert);
+            $total = $this->countDataRowsEligibleForImport();
 
             $this->updateState([
                 'user_id' => $this->userId,
@@ -46,7 +49,7 @@ class LoadCustomersFromCsvJob implements ShouldQueue
                 'total' => $total,
                 'rows_loaded' => 0,
                 'message' => null,
-            ]);
+            ], forceBroadcast: true);
 
             if ($total === 0) {
                 $this->updateState([
@@ -57,46 +60,15 @@ class LoadCustomersFromCsvJob implements ShouldQueue
                     'total' => 0,
                     'rows_loaded' => 0,
                     'message' => null,
-                ]);
+                ], forceBroadcast: true);
 
                 return;
             }
-            DB::transaction(function () use ($rowsToInsert, $total): void {
-                $now = now()->toDateTimeString();
-                $processed = 0;
 
-                foreach (array_chunk($rowsToInsert, 100) as $chunk) {
-                    $payload = [];
-                    foreach ($chunk as $row) {
-                        $payload[] = [
-                            'full_name' => $row['full_name'],
-                            'organization_name' => $row['organization_name'],
-                            'phone_country_name' => $row['phone_country_name'],
-                            'phone_number' => $row['phone_number'],
-                            'email' => $row['email'],
-                            'address' => $row['address'],
-                            'tax_id' => $row['tax_id'],
-                            'created_at' => $now,
-                            'updated_at' => $now,
-                            'deleted_at' => null,
-                        ];
-                    }
-
-                    Customer::insert($payload);
-                    $processed += count($chunk);
-                    $progress = (int) round(($processed / $total) * 100);
-
-                    $this->updateState([
-                        'user_id' => $this->userId,
-                        'status' => 'processing',
-                        'progress' => $progress,
-                        'processed' => $processed,
-                        'total' => $total,
-                        'rows_loaded' => $processed,
-                        'message' => null,
-                    ]);
-                }
+            DB::transaction(function () use ($total): void {
+                $this->streamInsertValidatedRows($total);
             });
+
             $this->updateState([
                 'user_id' => $this->userId,
                 'status' => 'success',
@@ -105,7 +77,7 @@ class LoadCustomersFromCsvJob implements ShouldQueue
                 'total' => $total,
                 'rows_loaded' => $total,
                 'message' => null,
-            ]);
+            ], forceBroadcast: true);
         } catch (ValidationException $e) {
             $message = collect($e->errors())->flatten()->first() ?? __('Validation failed.');
             $this->markFailed($message);
@@ -119,37 +91,54 @@ class LoadCustomersFromCsvJob implements ShouldQueue
     }
 
     /**
-     * @return list<array<string, string|null>>
+     * Count non-empty data rows with correct column count (no per-cell validation).
      */
-    private function collectValidatedRows(): array
+    private function countDataRowsEligibleForImport(): int
     {
-        $handle = fopen($this->absolutePath, 'r');
-        if ($handle === false) {
-            throw ValidationException::withMessages([
-                'csv' => [__('Could not read the uploaded CSV.')],
-            ]);
-        }
+        $opened = $this->openCsvWithValidatedHeader();
+        $handle = $opened['handle'];
+        $expected = $opened['expected'];
 
         try {
-            $headerRow = fgetcsv($handle);
-            if ($headerRow === false) {
-                throw ValidationException::withMessages([
-                    'csv' => [__('The CSV is empty.')],
-                ]);
-            }
-
-            CustomerLoadService::stripUtf8BomFromFirstCell($headerRow);
-
-            $expected = CustomerLoadService::expectedHeaders();
-            if ($headerRow !== $expected) {
-                throw ValidationException::withMessages([
-                    'csv' => [__('The CSV headers are invalid.')],
-                ]);
-            }
-
-            $rows = [];
+            $count = 0;
             $lineNumber = 1;
 
+            while (($row = fgetcsv($handle)) !== false) {
+                $lineNumber++;
+
+                if ($this->isCsvRowEmpty($row)) {
+                    continue;
+                }
+
+                if (count($row) !== count($expected)) {
+                    throw ValidationException::withMessages([
+                        'csv' => [__('Row :line has the wrong number of columns.', ['line' => $lineNumber])],
+                    ]);
+                }
+
+                $count++;
+            }
+
+            return $count;
+        } finally {
+            fclose($handle);
+        }
+    }
+
+    /**
+     * Validate each row and insert in chunks; progress is written every chunk, broadcasts throttled.
+     */
+    private function streamInsertValidatedRows(int $total): void
+    {
+        $opened = $this->openCsvWithValidatedHeader();
+        $handle = $opened['handle'];
+        $expected = $opened['expected'];
+        $now = now()->toDateTimeString();
+        $buffer = [];
+        $processed = 0;
+        $lineNumber = 1;
+
+        try {
             while (($row = fgetcsv($handle)) !== false) {
                 $lineNumber++;
 
@@ -174,7 +163,7 @@ class LoadCustomersFromCsvJob implements ShouldQueue
 
                 CustomerLoadService::validateRowData($assoc, $lineNumber);
 
-                $rows[] = [
+                $buffer[] = [
                     'full_name' => (string) $assoc['full_name'],
                     'organization_name' => $assoc['organization_name'] !== null && $assoc['organization_name'] !== ''
                         ? (string) $assoc['organization_name']
@@ -187,12 +176,97 @@ class LoadCustomersFromCsvJob implements ShouldQueue
                         ? (string) $assoc['tax_id']
                         : null,
                 ];
+
+                if (count($buffer) >= self::CHUNK_SIZE) {
+                    $this->flushCustomerChunk($buffer, $now);
+                    $processed += count($buffer);
+                    $buffer = [];
+                    $this->emitProgress($processed, $total);
+                }
             }
 
-            return $rows;
+            if ($buffer !== []) {
+                $this->flushCustomerChunk($buffer, $now);
+                $processed += count($buffer);
+                $this->emitProgress($processed, $total);
+            }
         } finally {
             fclose($handle);
         }
+    }
+
+    /**
+     * @param  list<array<string, string|null>>  $rows
+     */
+    private function flushCustomerChunk(array $rows, string $now): void
+    {
+        $payload = [];
+        foreach ($rows as $row) {
+            $payload[] = [
+                'full_name' => $row['full_name'],
+                'organization_name' => $row['organization_name'],
+                'phone_country_name' => $row['phone_country_name'],
+                'phone_number' => $row['phone_number'],
+                'email' => $row['email'],
+                'address' => $row['address'],
+                'tax_id' => $row['tax_id'],
+                'created_at' => $now,
+                'updated_at' => $now,
+                'deleted_at' => null,
+            ];
+        }
+
+        Customer::insert($payload);
+    }
+
+    private function emitProgress(int $processed, int $total): void
+    {
+        $progress = (int) round(($processed / $total) * 100);
+
+        $this->updateState([
+            'user_id' => $this->userId,
+            'status' => 'processing',
+            'progress' => $progress,
+            'processed' => $processed,
+            'total' => $total,
+            'rows_loaded' => $processed,
+            'message' => null,
+        ]);
+    }
+
+    /**
+     * @return array{handle: resource, expected: list<string>}
+     */
+    private function openCsvWithValidatedHeader(): array
+    {
+        $handle = fopen($this->absolutePath, 'r');
+        if ($handle === false) {
+            throw ValidationException::withMessages([
+                'csv' => [__('Could not read the uploaded CSV.')],
+            ]);
+        }
+
+        $headerRow = fgetcsv($handle);
+        if ($headerRow === false) {
+            fclose($handle);
+
+            throw ValidationException::withMessages([
+                'csv' => [__('The CSV is empty.')],
+            ]);
+        }
+
+        CustomerLoadService::stripUtf8BomFromFirstCell($headerRow);
+
+        $expected = CustomerLoadService::expectedHeaders();
+        if ($headerRow !== $expected) {
+            fclose($handle);
+
+            throw ValidationException::withMessages([
+                'csv' => [__('The CSV headers are invalid.')],
+            ]);
+        }
+
+        return ['handle' => $handle, 'expected' => $expected];
     }
 
     /**
@@ -212,9 +286,16 @@ class LoadCustomersFromCsvJob implements ShouldQueue
     /**
      * @param  array<string, mixed>  $state
      */
-    private function updateState(array $state): void
+    private function updateState(array $state, bool $forceBroadcast = false): void
     {
-        DataImportProgressNotifier::notify($this->userId, $this->importId, $state);
+        $signature = ($state['status'] ?? '').'|'.((int) ($state['progress'] ?? 0));
+        $broadcast = $forceBroadcast || $signature !== $this->lastBroadcastSignature;
+
+        DataImportProgressNotifier::notify($this->userId, $this->importId, $state, $broadcast);
+
+        if ($broadcast) {
+            $this->lastBroadcastSignature = $signature;
+        }
     }
 
     private function markFailed(string $message): void
@@ -227,6 +308,6 @@ class LoadCustomersFromCsvJob implements ShouldQueue
             'total' => 0,
             'rows_loaded' => 0,
             'message' => $message,
-        ]);
+        ], forceBroadcast: true);
     }
 }

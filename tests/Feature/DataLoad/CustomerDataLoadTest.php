@@ -126,6 +126,28 @@ class CustomerDataLoadTest extends TestCase
         );
     }
 
+    public function test_sync_import_accepts_tonga_phone_country(): void
+    {
+        $user = User::factory()->create();
+
+        $headers = implode(',', CustomerLoadService::expectedHeaders());
+        $csv = $headers."\nSione Langi,Ministry,Tonga,8765432,sione@example.to,Nuku'alofa,";
+        $file = UploadedFile::fake()->createWithContent('tonga.csv', $csv);
+
+        $response = $this->actingAs($user)
+            ->postJson(route('data-load.customers.upload'), [
+                'file' => $file,
+            ]);
+
+        $response->assertOk();
+
+        $this->assertDatabaseHas('customers', [
+            'email' => 'sione@example.to',
+            'full_name' => 'Sione Langi',
+            'phone_country_name' => 'Tonga',
+        ]);
+    }
+
     public function test_status_returns_forbidden_for_another_users_import(): void
     {
         $userA = User::factory()->create();

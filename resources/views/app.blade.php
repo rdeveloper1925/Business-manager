@@ -32,11 +32,11 @@
 
         @php
             $reverbRuntimeConfig = [
-                'appKey' => (string) (env('VITE_REVERB_APP_KEY') ?: env('REVERB_APP_KEY', '')),
-                'host' => (string) (env('VITE_REVERB_HOST') ?: env('REVERB_HOST', '')),
-                'port' => (int) (env('VITE_REVERB_PORT') ?: env('REVERB_PORT', 0)),
-                'scheme' => (string) (env('VITE_REVERB_SCHEME') ?: env('REVERB_SCHEME', 'http')),
-                'debug' => (bool) env('VITE_REVERB_DEBUG', false),
+                'appKey' => config('broadcasting_client.reverb.app_key'),
+                'host' => config('broadcasting_client.reverb.host'),
+                'port' => (int) config('broadcasting_client.reverb.port'),
+                'scheme' => config('broadcasting_client.reverb.scheme'),
+                'debug' => (bool) config('broadcasting_client.reverb.debug'),
             ];
         @endphp
         <script>

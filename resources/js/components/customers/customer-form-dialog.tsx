@@ -23,7 +23,6 @@ import {
 import {
     countryUsesNanpMask,
     findPhoneCountryByName,
-    flagEmojiFromIso2,
     formatNanpDisplay,
     formatNanpStorage,
     nationalDigitsOnly,
@@ -184,7 +183,7 @@ function CustomerFormFields({
                                         aria-hidden
                                         className="font-emoji-flag text-base leading-none"
                                     >
-                                        {flagEmojiFromIso2(c.iso2)}
+                                        {c.flag}
                                     </span>
                                     <span className="text-muted-foreground font-mono text-xs">
                                         {c.dialCode}

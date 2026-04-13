@@ -23,9 +23,6 @@ services:
       DB_USERNAME: ${DB_USERNAME:-laravel}
       DB_PASSWORD: ${DB_PASSWORD:-secret}
       DB_URL: ${DB_URL:-}
-      REDIS_HOST: ${DOCKER_REDIS_HOST:-redis}
-      REDIS_PORT: ${REDIS_PORT:-6379}
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       # Must match Reverb's listen port inside the network (reverb:start --port / REVERB_SERVER_PORT).
       # Do not use .env REVERB_PORT here — it is often 8080 for local `reverb:start`, which breaks Docker.
       REVERB_HOST: ${DOCKER_REVERB_HOST:-reverb}
@@ -69,9 +66,6 @@ services:
       DB_USERNAME: ${DB_USERNAME:-laravel}
       DB_PASSWORD: ${DB_PASSWORD:-secret}
       DB_URL: ${DB_URL:-}
-      REDIS_HOST: ${DOCKER_REDIS_HOST:-redis}
-      REDIS_PORT: ${REDIS_PORT:-6379}
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
       REVERB_HOST: ${DOCKER_REVERB_HOST:-reverb}
       REVERB_PORT: '8015'
       REVERB_SCHEME: ${REVERB_SCHEME:-http}
@@ -164,18 +158,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-
-  redis:
-    container_name: bm-redis
-    image: redis:alpine
-    restart: unless-stopped
-    networks:
-      - bm-network
-    healthcheck:
-      test: [ 'CMD', 'redis-cli', 'ping' ]
-      interval: 10s
-      timeout: 5s
-      retries: 3
 
 networks:
   bm-network:

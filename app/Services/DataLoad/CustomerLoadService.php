@@ -2,7 +2,6 @@
 
 namespace App\Services\DataLoad;
 
-use App\Interfaces\IDataLoaderService;
 use App\Jobs\LoadCustomersFromCsvJob;
 use App\Support\PhoneCountry;
 use Illuminate\Support\Facades\Validator;
@@ -10,7 +9,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-class CustomerLoadService implements IDataLoaderService
+class CustomerLoadService
 {
     /**
      * @return list<string>

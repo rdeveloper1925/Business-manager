@@ -15,9 +15,6 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Honor X-Forwarded-* from load balancers / TLS terminators (fixes http:// URLs on https sites).
-        $middleware->trustProxies(at: env('TRUSTED_PROXIES', '*'));
-
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(append: [

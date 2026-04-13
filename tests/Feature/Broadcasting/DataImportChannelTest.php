@@ -66,6 +66,28 @@ class DataImportChannelTest extends TestCase
         });
     }
 
+    public function test_notifier_can_skip_broadcast_while_persisting_cache(): void
+    {
+        Event::fake([DataImportProgressUpdated::class]);
+
+        $user = User::factory()->create();
+        $importId = (string) Str::uuid();
+        $state = [
+            'user_id' => $user->id,
+            'status' => 'processing',
+            'progress' => 50,
+            'processed' => 5,
+            'total' => 10,
+            'rows_loaded' => 5,
+            'message' => null,
+        ];
+
+        DataImportProgressNotifier::notify($user->id, $importId, $state, broadcast: false);
+
+        $this->assertSame($state, DataImportCache::get($user->id, $importId));
+        Event::assertNotDispatched(DataImportProgressUpdated::class);
+    }
+
     public function test_progress_event_rescues_failed_broadcasts_so_http_requests_do_not_500(): void
     {
         $event = new DataImportProgressUpdated(1, '00000000-0000-0000-0000-000000000001', [
