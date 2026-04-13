@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Broadcasting\DataImportProgressNotifier;
 use App\Models\Customer;
 use App\Services\DataLoad\CustomerLoadService;
 use App\Support\DataImportCache;
@@ -54,7 +55,7 @@ class DataLoaderController extends Controller
         $relativePath = $request->file('file')->storeAs('tmp/imports', $importId.'.csv', 'local');
         $absolutePath = Storage::disk('local')->path($relativePath);
 
-        DataImportCache::put($user->id, $importId, [
+        DataImportProgressNotifier::notify($user->id, $importId, [
             'user_id' => $user->id,
             'status' => 'pending',
             'progress' => 0,

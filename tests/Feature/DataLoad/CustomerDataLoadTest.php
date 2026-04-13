@@ -2,12 +2,14 @@
 
 namespace Tests\Feature\DataLoad;
 
+use App\Events\DataLoad\DataImportProgressUpdated;
 use App\Jobs\LoadCustomersFromCsvJob;
 use App\Models\User;
 use App\Services\DataLoad\CustomerLoadService;
 use App\Support\DataImportCache;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -69,6 +71,7 @@ class CustomerDataLoadTest extends TestCase
     public function test_valid_upload_dispatches_import_job(): void
     {
         Queue::fake();
+        Event::fake([DataImportProgressUpdated::class]);
 
         $user = User::factory()->create();
 
@@ -86,6 +89,11 @@ class CustomerDataLoadTest extends TestCase
 
         Queue::assertPushed(LoadCustomersFromCsvJob::class, function (LoadCustomersFromCsvJob $job) use ($response): bool {
             return $job->importId === $response->json('import_id');
+        });
+
+        Event::assertDispatched(DataImportProgressUpdated::class, function (DataImportProgressUpdated $e) use ($response): bool {
+            return $e->importId === $response->json('import_id')
+                && $e->state['status'] === 'pending';
         });
 
         $importId = $response->json('import_id');

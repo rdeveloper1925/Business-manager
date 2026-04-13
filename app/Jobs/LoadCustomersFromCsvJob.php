@@ -2,9 +2,9 @@
 
 namespace App\Jobs;
 
+use App\Broadcasting\DataImportProgressNotifier;
 use App\Models\Customer;
 use App\Services\DataLoad\CustomerLoadService;
-use App\Support\DataImportCache;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
@@ -219,7 +219,7 @@ class LoadCustomersFromCsvJob implements ShouldQueue
      */
     private function updateState(array $state): void
     {
-        DataImportCache::put($this->userId, $this->importId, $state);
+        DataImportProgressNotifier::notify($this->userId, $this->importId, $state);
     }
 
     private function markFailed(string $message): void

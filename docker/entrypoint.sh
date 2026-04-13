@@ -47,6 +47,13 @@ fix_app_writables
 # Remove storage-init directory
 rm -rf /var/www/storage-init
 
+# Reverb / one-off workers: do not run migrations or config/route cache here.
+# Running those concurrently from app + queue + reverb causes DB lock contention and
+# bootstrap/cache races (intermittent container failures).
+if [ "${LARAVEL_CONTAINER_ROLE:-}" = "reverb" ]; then
+    exec "$@"
+fi
+
 # Run Laravel migrations
 # -----------------------------------------------------------
 # Run artisan as www-data so new files under storage/ stay owned by Apache's user.
