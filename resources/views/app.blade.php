@@ -30,6 +30,21 @@
             }
         </style>
 
+        @php
+            $reverbRuntimeConfig = [
+                'appKey' => config('broadcasting_client.reverb.app_key'),
+                'host' => config('broadcasting_client.reverb.host'),
+                'port' => (int) config('broadcasting_client.reverb.port'),
+                'scheme' => config('broadcasting_client.reverb.scheme'),
+                'debug' => (bool) config('broadcasting_client.reverb.debug'),
+            ];
+        @endphp
+        <script>
+            window.__BM_RUNTIME_CONFIG__ = {
+                reverb: {{ \Illuminate\Support\Js::from($reverbRuntimeConfig) }},
+            };
+        </script>
+
         <link rel="icon" href="/favicon.ico" sizes="any">
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">

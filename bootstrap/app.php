@@ -11,12 +11,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
+        channels: __DIR__.'/../routes/channels.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Honor X-Forwarded-* from load balancers / TLS terminators (fixes http:// URLs on https sites).
-        $middleware->trustProxies(at: env('TRUSTED_PROXIES', '*'));
-
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(append: [

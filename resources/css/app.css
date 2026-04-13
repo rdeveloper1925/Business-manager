@@ -290,10 +290,15 @@
      * Primary UI fonts (e.g. Instrument Sans) can otherwise swallow codepoints and show nothing.
      */
     .font-emoji-flag {
+        /**
+         * `font-weight: 400` avoids inherited `font-medium` (500) breaking
+         * regional-indicator pairs into literal “CA”-style letters on some stacks.
+         */
         font-family:
-            "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", "Noto Emoji",
-            sans-serif;
+            "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji",
+            "Noto Emoji", emoji, sans-serif;
         font-style: normal;
+        font-weight: 400;
         font-variant-emoji: emoji;
     }
 }

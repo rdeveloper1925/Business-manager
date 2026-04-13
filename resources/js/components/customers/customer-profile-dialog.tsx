@@ -24,7 +24,6 @@ import { Separator } from '@/components/ui/separator';
 import { useInitials } from '@/hooks/use-initials';
 import {
     findPhoneCountryByName,
-    flagEmojiFromIso2,
     nationalDigitsOnly,
     telHref,
 } from '@/lib/phone-countries';
@@ -164,9 +163,7 @@ export function CustomerProfileDialog({
                                 const row = findPhoneCountryByName(
                                     customer.phone_country_name,
                                 );
-                                const flag = row
-                                    ? flagEmojiFromIso2(row.iso2)
-                                    : '';
+                                const flag = row?.flag ?? '';
 
                                 return (
                                     <span className="inline-flex flex-wrap items-center gap-2">

@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('customers', function (Blueprint $table) {
-            $table->string('phone_country_name')->default('United States')->after('organization_name');
+            $table->string('phone_country_name')->default('Canada')->after('organization_name');
         });
     }
 

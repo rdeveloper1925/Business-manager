@@ -18,11 +18,13 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { getEcho } from '@/echo';
 import { xsrfToken } from '@/lib/csrf';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 
 type ImportStatusResponse = {
+    import_id?: string;
     status: 'pending' | 'processing' | 'success' | 'failed';
     progress: number;
     processed: number;
@@ -30,6 +32,8 @@ type ImportStatusResponse = {
     rows_loaded: number;
     message: string | null;
 };
+
+const PROGRESS_EVENT = '.data-import.progress';
 
 function parseErrorMessage(data: Record<string, unknown>): string {
     if (typeof data.message === 'string' && data.message !== '') {
@@ -49,75 +53,198 @@ function parseErrorMessage(data: Record<string, unknown>): string {
     return 'Something went wrong.';
 }
 
+const CUSTOMER_IMPORT_SESSION_KEY = 'bm_customer_data_import_id';
+
+function persistActiveImportId(id: string): void {
+    try {
+        sessionStorage.setItem(CUSTOMER_IMPORT_SESSION_KEY, id);
+    } catch {
+        /* quota / private mode */
+    }
+}
+
+function readActiveImportId(): string | null {
+    try {
+        const v = sessionStorage.getItem(CUSTOMER_IMPORT_SESSION_KEY);
+
+        return v !== null && v !== '' ? v : null;
+    } catch {
+        return null;
+    }
+}
+
+function clearActiveImportId(): void {
+    try {
+        sessionStorage.removeItem(CUSTOMER_IMPORT_SESSION_KEY);
+    } catch {
+        /* ignore */
+    }
+}
+
+function applyTerminalToasts(
+    data: ImportStatusResponse,
+    options?: { suppressToast?: boolean },
+): void {
+    const showToast = !options?.suppressToast;
+
+    if (data.status === 'success') {
+        clearActiveImportId();
+
+        if (showToast) {
+            toast.success(
+                `Import finished. ${data.rows_loaded} row(s) loaded.`,
+            );
+        }
+    } else if (data.status === 'failed') {
+        clearActiveImportId();
+
+        if (showToast) {
+            toast.error(data.message ?? 'Import failed.');
+        }
+    }
+}
+
 export default function CustomerDataLoad() {
     const [importId, setImportId] = useState<string | null>(null);
-    const [pollState, setPollState] = useState<ImportStatusResponse | null>(
+    const [importStatus, setImportStatus] = useState<ImportStatusResponse | null>(
         null,
     );
     const [uploading, setUploading] = useState(false);
-    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-    const terminalToastRef = useRef(false);
+    const terminalToastShownRef = useRef(false);
+    const skipTerminalToastOnFirstHydrateRef = useRef(false);
 
-    const clearPoll = useCallback(() => {
-        if (intervalRef.current !== null) {
-            clearInterval(intervalRef.current);
-            intervalRef.current = null;
-        }
-    }, []);
+    const hydrateStatus = useCallback(
+        async (
+            id: string,
+            options?: { skipTerminalToastIfComplete?: boolean },
+        ): Promise<boolean> => {
+            const res = await fetch(statusRoute.url(id), {
+                method: 'GET',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                credentials: 'same-origin',
+            });
+
+            if (res.status === 403 || res.status === 404) {
+                clearActiveImportId();
+                setImportId(null);
+                setImportStatus(null);
+
+                return false;
+            }
+
+            if (!res.ok) {
+                return true;
+            }
+
+            const data = (await res.json()) as ImportStatusResponse;
+            setImportStatus(data);
+
+            if (data.status === 'success' || data.status === 'failed') {
+                const suppress =
+                    Boolean(options?.skipTerminalToastIfComplete) &&
+                    !terminalToastShownRef.current;
+                terminalToastShownRef.current = true;
+                applyTerminalToasts(data, { suppressToast: suppress });
+
+                return false;
+            }
+
+            return true;
+        },
+        [],
+    );
 
     useEffect(() => {
-        return () => {
-            clearPoll();
-        };
-    }, [clearPoll]);
+        const stored = readActiveImportId();
 
-    const pollOnce = useCallback(async (id: string) => {
-        const res = await fetch(statusRoute.url(id), {
-            method: 'GET',
-            headers: {
-                Accept: 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-            credentials: 'same-origin',
-        });
-
-        if (!res.ok) {
+        if (stored === null) {
             return;
         }
 
-        const data = (await res.json()) as ImportStatusResponse;
-        setPollState(data);
+        skipTerminalToastOnFirstHydrateRef.current = true;
+        setImportId(stored);
+    }, []);
 
-        if (data.status === 'success' || data.status === 'failed') {
-            clearPoll();
+    useEffect(() => {
+        if (importId === null) {
+            return;
+        }
 
-            if (!terminalToastRef.current) {
-                terminalToastRef.current = true;
+        let cancelled = false;
+        let pollTimer: ReturnType<typeof setInterval> | null = null;
+        const skipFirstTerminalToast = skipTerminalToastOnFirstHydrateRef.current;
+        skipTerminalToastOnFirstHydrateRef.current = false;
 
-                if (data.status === 'success') {
-                    toast.success(
-                        `Import finished. ${data.rows_loaded} row(s) loaded.`,
-                    );
+        const runHydrate = (options?: { skipTerminalToastIfComplete?: boolean }) => {
+            void hydrateStatus(importId, options).then((shouldContinue) => {
+                if (!shouldContinue && pollTimer !== null) {
+                    clearInterval(pollTimer);
+                    pollTimer = null;
+                }
+            });
+        };
+
+        runHydrate({
+            skipTerminalToastIfComplete: skipFirstTerminalToast,
+        });
+
+        // Fallback polling keeps the progress bar live if websocket auth/connection fails.
+        pollTimer = setInterval(() => {
+            if (cancelled) {
+                return;
+            }
+
+            runHydrate();
+        }, 3000);
+
+        const echo = getEcho();
+        const channelName = `data-import.${importId}`;
+
+        if (echo === null) {
+            return () => {
+                cancelled = true;
+                if (pollTimer !== null) {
+                    clearInterval(pollTimer);
+                    pollTimer = null;
+                }
+            };
+        }
+
+        const channel = echo.private(channelName);
+
+        channel.listen(PROGRESS_EVENT, (payload: ImportStatusResponse) => {
+            if (
+                typeof payload.import_id === 'string' &&
+                payload.import_id !== importId
+            ) {
+                return;
+            }
+
+            setImportStatus(payload);
+
+            if (payload.status === 'success' || payload.status === 'failed') {
+                if (!terminalToastShownRef.current) {
+                    terminalToastShownRef.current = true;
+                    applyTerminalToasts(payload);
                 } else {
-                    toast.error(
-                        data.message ?? 'Import failed.',
-                    );
+                    clearActiveImportId();
                 }
             }
-        }
-    }, [clearPoll]);
+        });
 
-    const startPolling = useCallback(
-        (id: string) => {
-            terminalToastRef.current = false;
-            clearPoll();
-            void pollOnce(id);
-            intervalRef.current = setInterval(() => {
-                void pollOnce(id);
-            }, 1000);
-        },
-        [clearPoll, pollOnce],
-    );
+        return () => {
+            cancelled = true;
+            channel.stopListening(PROGRESS_EVENT);
+            echo.leave(channelName);
+            if (pollTimer !== null) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+            }
+        };
+    }, [importId, hydrateStatus]);
 
     const onSubmitFile = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -132,10 +259,11 @@ export default function CustomerDataLoad() {
         }
 
         setUploading(true);
-        setPollState(null);
+        setImportStatus(null);
         setImportId(null);
-        clearPoll();
-        terminalToastRef.current = false;
+        clearActiveImportId();
+        terminalToastShownRef.current = false;
+        skipTerminalToastOnFirstHydrateRef.current = false;
 
         const body = new FormData();
         body.append('file', file);
@@ -172,8 +300,8 @@ export default function CustomerDataLoad() {
                 return;
             }
 
+            persistActiveImportId(id);
             setImportId(id);
-            startPolling(id);
             toast.info('Import started.');
             input.value = '';
         } catch {
@@ -184,9 +312,9 @@ export default function CustomerDataLoad() {
     };
 
     const progress =
-        pollState?.status === 'success'
+        importStatus?.status === 'success'
             ? 100
-            : Math.min(100, Math.max(0, pollState?.progress ?? 0));
+            : Math.min(100, Math.max(0, importStatus?.progress ?? 0));
 
     return (
         <>
@@ -248,7 +376,7 @@ export default function CustomerDataLoad() {
                     </CardContent>
                 </Card>
 
-                {(importId !== null || pollState !== null) && (
+                {(importId !== null || importStatus !== null) && (
                     <Card>
                         <CardHeader>
                             <CardTitle>Progress</CardTitle>
@@ -271,34 +399,34 @@ export default function CustomerDataLoad() {
                                     style={{ width: `${progress}%` }}
                                 />
                             </div>
-                            {pollState && (
+                            {importStatus && (
                                 <p className="text-muted-foreground text-sm">
                                     Status:{' '}
                                     <span className="text-foreground font-medium">
-                                        {pollState.status}
+                                        {importStatus.status}
                                     </span>
-                                    {pollState.total > 0 && (
+                                    {importStatus.total > 0 && (
                                         <>
                                             {' '}
-                                            — {pollState.processed} /{' '}
-                                            {pollState.total} rows
+                                            — {importStatus.processed} /{' '}
+                                            {importStatus.total} rows
                                         </>
                                     )}
                                 </p>
                             )}
-                            {pollState?.status === 'success' && (
+                            {importStatus?.status === 'success' && (
                                 <p className="text-sm text-green-700 dark:text-green-400">
-                                    Successfully loaded {pollState.rows_loaded}{' '}
+                                    Successfully loaded {importStatus.rows_loaded}{' '}
                                     row(s).
                                 </p>
                             )}
-                            {pollState?.status === 'failed' && (
+                            {importStatus?.status === 'failed' && (
                                 <p
                                     className={cn(
                                         'rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive',
                                     )}
                                 >
-                                    {pollState.message ?? 'Import failed.'}
+                                    {importStatus.message ?? 'Import failed.'}
                                 </p>
                             )}
                         </CardContent>

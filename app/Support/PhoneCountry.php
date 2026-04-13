@@ -8,11 +8,11 @@ class PhoneCountry
 {
     private const DATA_PATH = 'resources/js/data/phone-countries.json';
 
-    /** @var list<array{name: string, iso2: string, dialCode: string}>|null */
+    /** @var list<array{name: string, iso2: string, dialCode: string, flag: string}>|null */
     private static ?array $cached = null;
 
     /**
-     * @return list<array{name: string, iso2: string, dialCode: string}>
+     * @return list<array{name: string, iso2: string, dialCode: string, flag: string}>
      */
     public static function all(): array
     {
@@ -31,7 +31,7 @@ class PhoneCountry
             throw new InvalidArgumentException('Phone countries data file is invalid.');
         }
 
-        /** @var list<array{name: string, iso2: string, dialCode: string}> $decoded */
+        /** @var list<array{name: string, iso2: string, dialCode: string, flag: string}> $decoded */
         self::$cached = $decoded;
 
         return self::$cached;
@@ -46,7 +46,7 @@ class PhoneCountry
     }
 
     /**
-     * @return array{name: string, iso2: string, dialCode: string}|null
+     * @return array{name: string, iso2: string, dialCode: string, flag: string}|null
      */
     public static function findByName(?string $name): ?array
     {
@@ -61,6 +61,31 @@ class PhoneCountry
         }
 
         return null;
+    }
+
+    public static function defaultName(): string
+    {
+        return 'Canada';
+    }
+
+    /**
+     * Canonical catalog name when the CSV value matches a row; otherwise {@see defaultName()}.
+     *
+     * @param  mixed  $raw  Typically string|null from CSV cells
+     */
+    public static function resolveNameForImport(mixed $raw): string
+    {
+        $trimmed = is_string($raw) ? trim($raw) : '';
+
+        if ($trimmed === '') {
+            return self::defaultName();
+        }
+
+        if (self::findByName($trimmed) !== null) {
+            return $trimmed;
+        }
+
+        return self::defaultName();
     }
 
     public static function usesNanpMask(?string $countryName): bool

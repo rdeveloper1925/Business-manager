@@ -12,8 +12,8 @@ ARG PHP_RUNTIME_IMAGE=php:8.4-apache
 # -----------------------------------------------------------------------------
 FROM ${PHP_BUILD_IMAGE} AS builder
 
-# Refresh apt indexes; install build deps for docker-php-ext-install / pecl; compile extensions;
-# enable redis; remove build-only cruft to keep layer smaller.
+# Refresh apt indexes; install build deps for docker-php-ext-install; compile extensions;
+# remove build-only cruft to keep layer smaller.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     unzip \
@@ -29,8 +29,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zip \
     bcmath \
     soap \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
+    pcntl \
     && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # curl / unzip — tooling for Composer installer and archives.
@@ -41,7 +40,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # docker-php-ext-install … — official helper to compile and enable listed PHP extensions.
 # -j$(nproc) — parallel compile jobs matching CPU count.
 # pdo_mysql — Laravel database driver for MySQL.
-# pecl install redis + docker-php-ext-enable redis — Redis PHP extension for cache/queue/session.
 
 # Default working directory for subsequent COPY/RUN (Laravel root).
 WORKDIR /var/www

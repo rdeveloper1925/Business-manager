@@ -1,6 +1,12 @@
 import raw from '../data/phone-countries.json';
 
-export type PhoneCountry = { name: string; iso2: string; dialCode: string };
+export type PhoneCountry = {
+    name: string;
+    iso2: string;
+    dialCode: string;
+    /** Regional-indicator flag emoji derived from `iso2` (Unicode flag sequence). */
+    flag: string;
+};
 
 export const PHONE_COUNTRIES: PhoneCountry[] = raw;
 
@@ -8,6 +14,7 @@ export function countryUsesNanpMask(dialCode: string): boolean {
     return dialCode === '+1';
 }
 
+/** Computes the same value stored in each catalog row’s `flag` field. */
 export function flagEmojiFromIso2(iso2: string): string {
     const u = iso2.toUpperCase();
 
