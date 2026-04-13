@@ -62,74 +62,100 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
+    /* Landing palette — shared with marketing pages (see LandingPages/_layout.tsx) */
+    --landing-bg: oklch(0.97 0.028 250);
+    --landing-bg-subtle: oklch(0.93 0.045 248);
+    --landing-surface: oklch(0.995 0.012 250);
+    --landing-surface-muted: oklch(0.935 0.042 248);
+    --landing-border: oklch(0.8 0.065 245);
+    --landing-text: oklch(0.17 0.045 265);
+    --landing-text-muted: oklch(0.4 0.065 255);
+    --landing-primary: oklch(0.5 0.22 252);
+    --landing-primary-strong: oklch(0.44 0.23 252);
+    --landing-accent: oklch(0.56 0.2 155);
+    --landing-accent-strong: oklch(0.5 0.21 155);
+
+    /* App / shadcn — mapped to landing tokens */
+    --background: var(--landing-bg);
+    --foreground: var(--landing-text);
+    --card: var(--landing-surface);
+    --card-foreground: var(--landing-text);
+    --popover: var(--landing-surface);
+    --popover-foreground: var(--landing-text);
+    --primary: var(--landing-primary);
+    --primary-foreground: oklch(0.99 0.005 250);
+    --secondary: var(--landing-surface-muted);
+    --secondary-foreground: var(--landing-text);
+    --muted: var(--landing-bg-subtle);
+    --muted-foreground: var(--landing-text-muted);
+    --accent: var(--landing-surface-muted);
+    --accent-foreground: var(--landing-text);
     --destructive: oklch(0.577 0.245 27.325);
-    --destructive-foreground: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.87 0 0);
-    --chart-1: oklch(0.646 0.222 41.116);
-    --chart-2: oklch(0.6 0.118 184.704);
-    --chart-3: oklch(0.398 0.07 227.392);
-    --chart-4: oklch(0.828 0.189 84.429);
-    --chart-5: oklch(0.769 0.188 70.08);
+    --destructive-foreground: oklch(0.985 0 0);
+    --border: var(--landing-border);
+    --input: var(--landing-border);
+    --ring: var(--landing-primary);
+    --chart-1: var(--landing-primary);
+    --chart-2: var(--landing-accent);
+    --chart-3: oklch(0.55 0.14 280);
+    --chart-4: oklch(0.65 0.12 200);
+    --chart-5: oklch(0.58 0.16 300);
     --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.87 0 0);
+    --sidebar: var(--landing-surface-muted);
+    --sidebar-foreground: var(--landing-text);
+    --sidebar-primary: var(--landing-primary);
+    --sidebar-primary-foreground: oklch(0.99 0.005 250);
+    --sidebar-accent: var(--landing-surface);
+    --sidebar-accent-foreground: var(--landing-text);
+    --sidebar-border: var(--landing-border);
+    --sidebar-ring: var(--landing-primary);
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.145 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.145 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.985 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.396 0.141 25.723);
-    --destructive-foreground: oklch(0.637 0.237 25.331);
-    --border: oklch(0.269 0 0);
-    --input: oklch(0.269 0 0);
-    --ring: oklch(0.439 0 0);
-    --chart-1: oklch(0.488 0.243 264.376);
-    --chart-2: oklch(0.696 0.17 162.48);
-    --chart-3: oklch(0.769 0.188 70.08);
-    --chart-4: oklch(0.627 0.265 303.9);
-    --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.985 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(0.269 0 0);
-    --sidebar-ring: oklch(0.439 0 0);
+    --landing-bg: oklch(0.15 0.048 265);
+    --landing-bg-subtle: oklch(0.19 0.055 265);
+    --landing-surface: oklch(0.21 0.055 265);
+    --landing-surface-muted: oklch(0.25 0.06 265);
+    --landing-border: oklch(0.36 0.09 265);
+    --landing-text: oklch(0.98 0.018 250);
+    --landing-text-muted: oklch(0.82 0.045 250);
+    --landing-primary: oklch(0.72 0.19 252);
+    --landing-primary-strong: oklch(0.66 0.2 252);
+    --landing-accent: oklch(0.78 0.17 155);
+    --landing-accent-strong: oklch(0.72 0.18 155);
+
+    --background: var(--landing-bg);
+    --foreground: var(--landing-text);
+    --card: var(--landing-surface);
+    --card-foreground: var(--landing-text);
+    --popover: var(--landing-surface);
+    --popover-foreground: var(--landing-text);
+    --primary: var(--landing-primary);
+    --primary-foreground: oklch(0.99 0.005 250);
+    --secondary: var(--landing-surface-muted);
+    --secondary-foreground: var(--landing-text);
+    --muted: var(--landing-bg-subtle);
+    --muted-foreground: var(--landing-text-muted);
+    --accent: var(--landing-surface-muted);
+    --accent-foreground: var(--landing-text);
+    --destructive: oklch(0.637 0.237 25.331);
+    --destructive-foreground: oklch(0.985 0 0);
+    --border: var(--landing-border);
+    --input: var(--landing-border);
+    --ring: var(--landing-primary);
+    --chart-1: var(--landing-primary);
+    --chart-2: var(--landing-accent);
+    --chart-3: oklch(0.65 0.18 280);
+    --chart-4: oklch(0.72 0.14 200);
+    --chart-5: oklch(0.68 0.16 300);
+    --sidebar: var(--landing-surface-muted);
+    --sidebar-foreground: var(--landing-text);
+    --sidebar-primary: var(--landing-primary);
+    --sidebar-primary-foreground: oklch(0.99 0.005 250);
+    --sidebar-accent: var(--landing-surface);
+    --sidebar-accent-foreground: var(--landing-text);
+    --sidebar-border: var(--landing-border);
+    --sidebar-ring: var(--landing-primary);
 }
 
 @layer base {
@@ -139,5 +165,140 @@
 
     body {
         @apply bg-background text-foreground;
+    }
+
+    button:not(:disabled),
+    [role='button']:not([aria-disabled='true']),
+    input[type='button']:not(:disabled),
+    input[type='submit']:not(:disabled),
+    input[type='reset']:not(:disabled) {
+        @apply cursor-pointer;
+    }
+}
+
+@keyframes landing-fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes landing-float {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}
+
+@layer components {
+    .landing-shell {
+        background-color: var(--landing-bg);
+        color: var(--landing-text);
+    }
+
+    .landing-muted-bg {
+        background-color: var(--landing-bg-subtle);
+    }
+
+    .landing-surface {
+        border-color: var(--landing-border);
+        background-color: var(--landing-surface);
+    }
+
+    .landing-surface-muted {
+        border-color: var(--landing-border);
+        background-color: var(--landing-surface-muted);
+    }
+
+    .landing-title {
+        color: var(--landing-text);
+    }
+
+    .landing-copy {
+        color: var(--landing-text-muted);
+    }
+
+    .landing-tag {
+        border-color: color-mix(in oklab, var(--landing-primary) 45%, transparent);
+        background-color: color-mix(in oklab, var(--landing-primary) 22%, transparent);
+        color: var(--landing-primary-strong);
+    }
+
+    .dark .landing-tag {
+        color: var(--landing-primary);
+    }
+
+    .landing-btn-primary,
+    .landing-btn-accent,
+    .landing-btn-secondary {
+        cursor: pointer;
+    }
+
+    .landing-btn-primary {
+        background-color: var(--landing-primary);
+        color: #ffffff;
+    }
+
+    .landing-btn-primary:hover {
+        background-color: var(--landing-primary-strong);
+    }
+
+    .landing-btn-accent {
+        background-color: var(--landing-accent);
+        color: #ffffff;
+    }
+
+    .landing-btn-accent:hover {
+        background-color: var(--landing-accent-strong);
+    }
+
+    .landing-btn-secondary {
+        border-color: var(--landing-border);
+        background-color: transparent;
+        color: var(--landing-text);
+    }
+
+    .landing-btn-secondary:hover {
+        background-color: color-mix(in oklab, var(--landing-surface-muted) 70%, transparent);
+    }
+
+    .landing-animate-up {
+        animation: landing-fade-up 0.7s ease both;
+    }
+
+    .landing-animate-up-delay {
+        animation: landing-fade-up 0.95s ease both;
+    }
+
+    .landing-animate-float {
+        animation: landing-float 5.2s ease-in-out infinite;
+    }
+}
+
+@layer utilities {
+    /**
+     * Force emoji-capable fonts for regional-indicator flag sequences.
+     * Primary UI fonts (e.g. Instrument Sans) can otherwise swallow codepoints and show nothing.
+     */
+    .font-emoji-flag {
+        /**
+         * `font-weight: 400` avoids inherited `font-medium` (500) breaking
+         * regional-indicator pairs into literal “CA”-style letters on some stacks.
+         */
+        font-family:
+            "Noto Color Emoji", "Apple Color Emoji", "Segoe UI Emoji",
+            "Noto Emoji", emoji, sans-serif;
+        font-style: normal;
+        font-weight: 400;
+        font-variant-emoji: emoji;
     }
 }

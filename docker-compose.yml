@@ -1,81 +1,168 @@
 services:
-    app:
-        container_name: app-production
-        build:
-            context: .
-            dockerfile: ./docker/common/php-fpm/Dockerfile
-            target: production
-            args:
-                PHP_BUILD_IMAGE: ${PHP_BUILD_IMAGE:-mirror.gcr.io/library/php:8.4-cli}
-                PHP_RUNTIME_IMAGE: ${PHP_RUNTIME_IMAGE:-mirror.gcr.io/library/php:8.4-apache}
-        restart: unless-stopped
-        volumes:
-            - laravel-storage-production:/var/www/storage
-            - laravel-public-assets:/var/www/public/build
-        env_file:
-            - .env
-        environment:
-            DB_CONNECTION: ${DB_CONNECTION:-mysql}
-            # DB_HOST=127.0.0.1 in .env is for PHP on your machine; inside the container use the Compose network hostname.
-            DB_HOST: ${DOCKER_DB_HOST:-mysql}
-            DB_PORT: ${DB_PORT:-3306}
-            DB_DATABASE: ${DB_DATABASE:-app}
-            DB_USERNAME: ${DB_USERNAME:-laravel}
-            DB_PASSWORD: ${DB_PASSWORD:-secret}
-            DB_URL: ${DB_URL:-}
-            REDIS_HOST: ${DOCKER_REDIS_HOST:-redis}
-            REDIS_PORT: ${REDIS_PORT:-6379}
-            REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-        networks:
-            - laravel-production
-        ports:
-            - "${APP_PORT:-8011}:80"
-        healthcheck:
-            test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1/ >/dev/null || exit 1']
-            interval: 10s
-            timeout: 5s
-            retries: 3
-        depends_on:
-            mysql:
-                condition: service_healthy
+  app:
+    container_name: bm-app
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+      target: production
+      args:
+        PHP_BUILD_IMAGE: ${PHP_BUILD_IMAGE:-mirror.gcr.io/library/php:8.4-cli}
+        PHP_RUNTIME_IMAGE: ${PHP_RUNTIME_IMAGE:-mirror.gcr.io/library/php:8.4-apache}
+    restart: unless-stopped
+    volumes:
+      # Named volume for public/build would shadow fresh Vite output from each image build.
+      - bm-app-storage:/var/www/storage
+    env_file:
+      - .env
+    environment:
+      DB_CONNECTION: ${DB_CONNECTION:-mysql}
+      # DB_HOST=127.0.0.1 in .env is for PHP on your machine; inside the container use the Compose network hostname.
+      DB_HOST: ${DOCKER_DB_HOST:-mysql}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_DATABASE: ${DB_DATABASE:-app}
+      DB_USERNAME: ${DB_USERNAME:-laravel}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      DB_URL: ${DB_URL:-}
+      # Must match Reverb's listen port inside the network (reverb:start --port / REVERB_SERVER_PORT).
+      # Do not use .env REVERB_PORT here — it is often 8080 for local `reverb:start`, which breaks Docker.
+      REVERB_HOST: ${DOCKER_REVERB_HOST:-reverb}
+      REVERB_PORT: '8015'
+      REVERB_SCHEME: ${REVERB_SCHEME:-http}
+    networks:
+      - bm-network
+    ports:
+      - "${APP_PORT:-8013}:80"
+    healthcheck:
+      test: [ 'CMD-SHELL', 'curl -fsS http://127.0.0.1/ >/dev/null || exit 1' ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    depends_on:
+      mysql:
+        condition: service_healthy
+      reverb:
+        condition: service_healthy
 
-    mysql:
-        container_name: mysql-production
-        image: mysql:8.4
-        restart: unless-stopped
-        ports:
-            - "${MYSQL_PORT:-8012}:3306"
-        environment:
-            MYSQL_DATABASE: ${DB_DATABASE:-app}
-            MYSQL_USER: ${DB_USERNAME:-laravel}
-            MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
-            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-secret}
-        volumes:
-            - mysql-data-production:/var/lib/mysql
-        networks:
-            - laravel-production
-        healthcheck:
-            test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
-            interval: 10s
-            timeout: 5s
-            retries: 5
+  # Processes ShouldQueue jobs (e.g. CSV import). Without this, imports stay "pending" forever.
+  queue:
+    container_name: bm-queue
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+      target: production
+      args:
+        PHP_BUILD_IMAGE: ${PHP_BUILD_IMAGE:-mirror.gcr.io/library/php:8.4-cli}
+        PHP_RUNTIME_IMAGE: ${PHP_RUNTIME_IMAGE:-mirror.gcr.io/library/php:8.4-apache}
+    restart: unless-stopped
+    volumes:
+      - bm-app-storage:/var/www/storage
+    env_file:
+      - .env
+    environment:
+      DB_CONNECTION: ${DB_CONNECTION:-mysql}
+      DB_HOST: ${DOCKER_DB_HOST:-mysql}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_DATABASE: ${DB_DATABASE:-app}
+      DB_USERNAME: ${DB_USERNAME:-laravel}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      DB_URL: ${DB_URL:-}
+      REVERB_HOST: ${DOCKER_REVERB_HOST:-reverb}
+      REVERB_PORT: '8015'
+      REVERB_SCHEME: ${REVERB_SCHEME:-http}
+    networks:
+      - bm-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      reverb:
+        condition: service_healthy
+    command:
+      - runuser
+      - -u
+      - www-data
+      - --
+      - env
+      - HOME=/var/www
+      - sh
+      - -c
+      - cd /var/www && exec php artisan queue:work --sleep=3 --tries=3 --max-time=3600
 
-    redis:
-        container_name: redis-production
-        image: redis:alpine
-        restart: unless-stopped
-        networks:
-            - laravel-production
-        healthcheck:
-            test: ['CMD', 'redis-cli', 'ping']
-            interval: 10s
-            timeout: 5s
-            retries: 3
+  reverb:
+    container_name: bm-reverb
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+      target: production
+      args:
+        PHP_BUILD_IMAGE: ${PHP_BUILD_IMAGE:-mirror.gcr.io/library/php:8.4-cli}
+        PHP_RUNTIME_IMAGE: ${PHP_RUNTIME_IMAGE:-mirror.gcr.io/library/php:8.4-apache}
+    restart: unless-stopped
+    volumes:
+      - bm-app-storage:/var/www/storage
+    env_file:
+      - .env
+    environment:
+      LARAVEL_CONTAINER_ROLE: reverb
+      DB_CONNECTION: ${DB_CONNECTION:-mysql}
+      DB_HOST: ${DOCKER_DB_HOST:-mysql}
+      DB_PORT: ${DB_PORT:-3306}
+      DB_DATABASE: ${DB_DATABASE:-app}
+      DB_USERNAME: ${DB_USERNAME:-laravel}
+      DB_PASSWORD: ${DB_PASSWORD:-secret}
+      DB_URL: ${DB_URL:-}
+      REVERB_SERVER_HOST: 0.0.0.0
+      REVERB_SERVER_PORT: 8015
+    networks:
+      - bm-network
+    ports:
+      - "${REVERB_PORT:-8015}:8015"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    # TCP open on WebSocket port (must match REVERB_SERVER_PORT / reverb:start --port).
+    # Bash /dev/tcp avoids Compose $$ escaping bugs with php -r healthchecks.
+    healthcheck:
+      test: ['CMD-SHELL', "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8015' || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 25s
+    command:
+      - runuser
+      - -u
+      - www-data
+      - --
+      - env
+      - HOME=/var/www
+      - sh
+      - -c
+      - cd /var/www && exec php artisan reverb:start --host=0.0.0.0 --port=8015
+
+  mysql:
+    container_name: bm-db
+    image: mysql:8.4
+    restart: unless-stopped
+    ports:
+      - "${MYSQL_PORT:-8014}:3306"
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-app}
+      MYSQL_USER: ${DB_USERNAME:-laravel}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-secret}
+    volumes:
+      - bm-db-store:/var/lib/mysql
+    networks:
+      - bm-network
+    healthcheck:
+      test: [ 'CMD', 'mysqladmin', 'ping', '-h', 'localhost' ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 networks:
-    laravel-production:
+  bm-network:
+
 
 volumes:
-    mysql-data-production:
-    laravel-storage-production:
-    laravel-public-assets:
+  bm-db-store:
+  bm-app-storage:

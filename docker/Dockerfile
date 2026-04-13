@@ -12,8 +12,8 @@ ARG PHP_RUNTIME_IMAGE=php:8.4-apache
 # -----------------------------------------------------------------------------
 FROM ${PHP_BUILD_IMAGE} AS builder
 
-# Refresh apt indexes; install build deps for docker-php-ext-install / pecl; compile extensions;
-# enable redis; remove build-only cruft to keep layer smaller.
+# Refresh apt indexes; install build deps for docker-php-ext-install; compile extensions;
+# remove build-only cruft to keep layer smaller.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     unzip \
@@ -29,8 +29,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     zip \
     bcmath \
     soap \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
+    pcntl \
     && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # curl / unzip — tooling for Composer installer and archives.
@@ -41,7 +40,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # docker-php-ext-install … — official helper to compile and enable listed PHP extensions.
 # -j$(nproc) — parallel compile jobs matching CPU count.
 # pdo_mysql — Laravel database driver for MySQL.
-# pecl install redis + docker-php-ext-enable redis — Redis PHP extension for cache/queue/session.
 
 # Default working directory for subsequent COPY/RUN (Laravel root).
 WORKDIR /var/www
@@ -101,11 +99,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # curl — HEALTHCHECK hits localhost; also handy for manual checks.
 
 # Ship startup script (migrations, Laravel caches, then exec CMD).
-COPY ./docker/production/php-fpm/entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Apache vhost: DocumentRoot public/, AllowOverride for Laravel .htaccess.
-COPY ./docker/production/apache/000-default.conf /etc/apache2/sites-available/000-default.conf
+COPY ./docker/000-default.conf /etc/apache2/sites-available/000-default.conf
 RUN a2enmod rewrite
 
 # Seed copy of storage skeleton; entrypoint copies into volume if /var/www/storage is empty.
@@ -122,7 +120,7 @@ RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
 # Application code from builder (vendor, app, resources, public without fresh build dir yet).
 COPY --from=builder /var/www /var/www
 
-# Overlay compiled Vite assets into public/build (volume in Compose can override at runtime).
+# Overlay compiled Vite assets into public/build (serve from image; avoid a named volume here).
 COPY --from=assets /var/www/public/build /var/www/public/build
 
 WORKDIR /var/www

@@ -41,7 +41,10 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Laravel merges framework database connections; keep only MySQL.
+     * Laravel merges framework database connections; keep only MySQL outside automated tests.
+     *
+     * PHPUnit uses an in-memory SQLite database; testing must retain the sqlite connection
+     * and honor the DB_CONNECTION environment variable instead of forcing mysql as default.
      */
     protected function restrictDatabaseToMysql(): void
     {
@@ -49,6 +52,23 @@ class AppServiceProvider extends ServiceProvider
 
         if (! is_array($mysql)) {
             throw new RuntimeException('The mysql database connection must be configured.');
+        }
+
+        if ($this->app->environment('testing')) {
+            $sqlite = config('database.connections.sqlite');
+
+            if (! is_array($sqlite)) {
+                throw new RuntimeException('The sqlite database connection must be configured for testing.');
+            }
+
+            config([
+                'database.connections' => [
+                    'sqlite' => $sqlite,
+                    'mysql' => $mysql,
+                ],
+            ]);
+
+            return;
         }
 
         config([

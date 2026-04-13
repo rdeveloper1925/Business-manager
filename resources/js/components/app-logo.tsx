@@ -1,14 +1,12 @@
-import AppLogoIcon from '@/components/app-logo-icon';
-
 export default function AppLogo() {
     return (
         <>
-            <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-                <AppLogoIcon className="size-5 fill-current text-white dark:text-black" />
-            </div>
+            <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[var(--landing-primary)] font-semibold text-white shadow-md ring-2 ring-[color-mix(in_oklab,var(--landing-primary)_35%,transparent)]">
+                BM
+            </span>
             <div className="ml-1 grid flex-1 text-left text-sm">
-                <span className="mb-0.5 truncate leading-tight font-semibold">
-                    Laravel Starter Kit
+                <span className="mb-0.5 truncate leading-tight font-semibold tracking-wide text-[var(--landing-text)]">
+                    Business Manager
                 </span>
             </div>
         </>
