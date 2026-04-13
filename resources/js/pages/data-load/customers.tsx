@@ -174,16 +174,31 @@ export default function CustomerDataLoad() {
         }
 
         let cancelled = false;
+        let pollTimer: ReturnType<typeof setInterval> | null = null;
         const skipFirstTerminalToast = skipTerminalToastOnFirstHydrateRef.current;
         skipTerminalToastOnFirstHydrateRef.current = false;
 
-        void hydrateStatus(importId, {
+        const runHydrate = (options?: { skipTerminalToastIfComplete?: boolean }) => {
+            void hydrateStatus(importId, options).then((shouldContinue) => {
+                if (!shouldContinue && pollTimer !== null) {
+                    clearInterval(pollTimer);
+                    pollTimer = null;
+                }
+            });
+        };
+
+        runHydrate({
             skipTerminalToastIfComplete: skipFirstTerminalToast,
-        }).then(() => {
+        });
+
+        // Fallback polling keeps the progress bar live if websocket auth/connection fails.
+        pollTimer = setInterval(() => {
             if (cancelled) {
                 return;
             }
-        });
+
+            runHydrate();
+        }, 3000);
 
         const echo = getEcho();
         const channelName = `data-import.${importId}`;
@@ -191,6 +206,10 @@ export default function CustomerDataLoad() {
         if (echo === null) {
             return () => {
                 cancelled = true;
+                if (pollTimer !== null) {
+                    clearInterval(pollTimer);
+                    pollTimer = null;
+                }
             };
         }
 
@@ -220,6 +239,10 @@ export default function CustomerDataLoad() {
             cancelled = true;
             channel.stopListening(PROGRESS_EVENT);
             echo.leave(channelName);
+            if (pollTimer !== null) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+            }
         };
     }, [importId, hydrateStatus]);
 

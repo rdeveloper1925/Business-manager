@@ -30,6 +30,21 @@
             }
         </style>
 
+        @php
+            $reverbRuntimeConfig = [
+                'appKey' => (string) (env('VITE_REVERB_APP_KEY') ?: env('REVERB_APP_KEY', '')),
+                'host' => (string) (env('VITE_REVERB_HOST') ?: env('REVERB_HOST', '')),
+                'port' => (int) (env('VITE_REVERB_PORT') ?: env('REVERB_PORT', 0)),
+                'scheme' => (string) (env('VITE_REVERB_SCHEME') ?: env('REVERB_SCHEME', 'http')),
+                'debug' => (bool) env('VITE_REVERB_DEBUG', false),
+            ];
+        @endphp
+        <script>
+            window.__BM_RUNTIME_CONFIG__ = {
+                reverb: {{ \Illuminate\Support\Js::from($reverbRuntimeConfig) }},
+            };
+        </script>
+
         <link rel="icon" href="/favicon.ico" sizes="any">
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">

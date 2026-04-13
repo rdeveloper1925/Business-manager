@@ -8,12 +8,13 @@ use App\Services\DataLoad\CustomerLoadService;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class LoadCustomersFromCsvJob implements ShouldQueue
 {
     use Queueable;
+
+    public int $timeout = 300;
 
     public function __construct(
         public string $importId,
@@ -60,7 +61,6 @@ class LoadCustomersFromCsvJob implements ShouldQueue
 
                 return;
             }
-
             DB::transaction(function () use ($rowsToInsert, $total): void {
                 $now = now()->toDateTimeString();
                 $processed = 0;
@@ -97,7 +97,6 @@ class LoadCustomersFromCsvJob implements ShouldQueue
                     ]);
                 }
             });
-
             $this->updateState([
                 'user_id' => $this->userId,
                 'status' => 'success',
@@ -111,10 +110,6 @@ class LoadCustomersFromCsvJob implements ShouldQueue
             $message = collect($e->errors())->flatten()->first() ?? __('Validation failed.');
             $this->markFailed($message);
         } catch (\Throwable $e) {
-            Log::error('LoadCustomersFromCsvJob failed', [
-                'import_id' => $this->importId,
-                'exception' => $e,
-            ]);
             $this->markFailed(__('Import failed. Please try again.'));
         } finally {
             if (is_file($this->absolutePath)) {
