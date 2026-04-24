@@ -25,9 +25,18 @@ fix_app_writables() {
 run_as_www_data() {
     _cmd=$1
     if command -v runuser >/dev/null 2>&1; then
-        runuser -u www-data -- env HOME=/var/www sh -c "cd /var/www && ${_cmd}"
+        runuser -u www-data -- env HOME=/var/www "APP_KEY=${APP_KEY}" sh -c "cd /var/www && ${_cmd}"
     else
-        su -s /bin/sh www-data -c "cd /var/www && ${_cmd}"
+        env HOME=/var/www "APP_KEY=${APP_KEY}" su -s /bin/sh www-data -c "cd /var/www && ${_cmd}"
+    fi
+}
+
+# `php artisan key:generate` boots Laravel and fails if APP_KEY is missing; generate out-of-band.
+ensure_app_key() {
+    if [ -z "${APP_KEY:-}" ]; then
+        APP_KEY="$(php -r 'echo "base64:".base64_encode(random_bytes(32));')"
+        export APP_KEY
+        printf '%s\n' 'entrypoint: APP_KEY was empty; generated a random key for this container.'
     fi
 }
 
@@ -46,6 +55,8 @@ fix_app_writables
 
 # Remove storage-init directory
 rm -rf /var/www/storage-init
+
+ensure_app_key
 
 # Reverb / one-off workers: do not run migrations or config/route cache here.
 # Running those concurrently from app + queue + reverb causes DB lock contention and
