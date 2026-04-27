@@ -14,5 +14,6 @@ class DockerProductionSetupTest extends TestCase
         $this->assertFileExists($root.'/docker/Dockerfile');
         $this->assertFileExists($root.'/docker/entrypoint.sh');
         $this->assertFileExists($root.'/docker/000-default.conf');
+        $this->assertFileExists($root.'/docker/servername.conf');
     }
 }

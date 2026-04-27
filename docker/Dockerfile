@@ -23,8 +23,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libcurl4-openssl-dev \
     libicu-dev \
     libzip-dev \
+    libpq-dev \
     && docker-php-ext-install -j$(nproc) \
-    pdo_mysql \
+    pdo_pgsql \
     intl \
     zip \
     bcmath \
@@ -39,7 +40,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # libzip-dev — zip extension.
 # docker-php-ext-install … — official helper to compile and enable listed PHP extensions.
 # -j$(nproc) — parallel compile jobs matching CPU count.
-# pdo_mysql — Laravel database driver for MySQL.
+# pdo_pgsql — Laravel database driver for PostgreSQL.
 
 # Default working directory for subsequent COPY/RUN (Laravel root).
 WORKDIR /var/www
@@ -88,6 +89,7 @@ FROM ${PHP_RUNTIME_IMAGE} AS production
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libicu-dev \
     libzip-dev \
+    libpq5 \
     nano \
     procps \
     curl \
@@ -104,7 +106,8 @@ RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Apache vhost: DocumentRoot public/, AllowOverride for Laravel .htaccess.
 COPY ./docker/000-default.conf /etc/apache2/sites-available/000-default.conf
-RUN a2enmod rewrite
+COPY ./docker/servername.conf /etc/apache2/conf-available/servername.conf
+RUN a2enmod rewrite && a2enconf -q servername
 
 # Seed copy of storage skeleton; entrypoint copies into volume if /var/www/storage is empty.
 COPY ./storage /var/www/storage-init
