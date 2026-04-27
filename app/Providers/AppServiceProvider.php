@@ -25,7 +25,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $this->restrictDatabaseToMysql();
+        $this->restrictDatabaseConnections();
         $this->configureUrlScheme();
         $this->configureDefaults();
     }
@@ -41,17 +41,17 @@ class AppServiceProvider extends ServiceProvider
     }
 
     /**
-     * Laravel merges framework database connections; keep only MySQL outside automated tests.
+     * Laravel merges framework database connections; keep only Postgres outside automated tests.
      *
      * PHPUnit uses an in-memory SQLite database; testing must retain the sqlite connection
-     * and honor the DB_CONNECTION environment variable instead of forcing mysql as default.
+     * and honor the DB_CONNECTION environment variable instead of forcing a single default.
      */
-    protected function restrictDatabaseToMysql(): void
+    protected function restrictDatabaseConnections(): void
     {
-        $mysql = config('database.connections.mysql');
+        $pgsql = config('database.connections.pgsql');
 
-        if (! is_array($mysql)) {
-            throw new RuntimeException('The mysql database connection must be configured.');
+        if (! is_array($pgsql)) {
+            throw new RuntimeException('The pgsql database connection must be configured.');
         }
 
         if ($this->app->environment('testing')) {
@@ -64,16 +64,18 @@ class AppServiceProvider extends ServiceProvider
             config([
                 'database.connections' => [
                     'sqlite' => $sqlite,
-                    'mysql' => $mysql,
+                    'pgsql' => $pgsql,
                 ],
+                'database.default' => env('DB_CONNECTION', 'pgsql'),
             ]);
 
             return;
         }
 
         config([
-            'database.connections' => ['mysql' => $mysql],
-            'database.default' => 'mysql',
+            'database.connections' => ['pgsql' => $pgsql],
+            // Only `pgsql` exists here; align default (avoids local boot before tests when .env still says mysql).
+            'database.default' => 'pgsql',
         ]);
     }
 
