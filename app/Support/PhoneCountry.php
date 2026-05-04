@@ -106,23 +106,13 @@ class PhoneCountry
     }
 
     /**
-     * @return list<\Closure(string, mixed, \Closure): void|string>
+     * Validation rules for a free-form phone label (any text the user or import provides).
+     *
+     * @param  string|null  $countryName  Retained for callers; not used in rules.
+     * @return list<string>
      */
     public static function rulesForPhoneNumber(?string $countryName): array
     {
-        $base = ['required', 'string', 'max:50'];
-
-        if (self::usesNanpMask($countryName)) {
-            return array_merge($base, ['regex:/^\(\d{3}\)-\d{3}-\d{4}$/']);
-        }
-
-        return array_merge($base, [
-            function (string $attribute, mixed $value, \Closure $fail): void {
-                $digits = preg_replace('/\D/', '', (string) $value);
-                if (strlen($digits) < 7) {
-                    $fail(__('The :attribute must contain at least 7 digits.'));
-                }
-            },
-        ]);
+        return ['required', 'string', 'max:255'];
     }
 }

@@ -1,7 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { ChevronRight, Database, Users } from 'lucide-react';
 
-import { customersPage } from '@/actions/App/Http/Controllers/DataLoaderController';
 import {
     Collapsible,
     CollapsibleContent,
@@ -18,6 +17,7 @@ import {
     SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/hooks/use-current-url';
+import { customersPage } from '@/actions/App/Http/Controllers/DataLoaderController';
 
 export function NavDataLoader() {
     const { isCurrentUrl, isCurrentOrParentUrl } = useCurrentUrl();

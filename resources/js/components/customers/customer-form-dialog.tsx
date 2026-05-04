@@ -1,6 +1,5 @@
 import { Form } from '@inertiajs/react';
 import { useState } from 'react';
-import CustomerController from '@/actions/App/Http/Controllers/CustomerController';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,17 +19,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import {
-    countryUsesNanpMask,
-    findPhoneCountryByName,
-    formatNanpDisplay,
-    formatNanpStorage,
-    nationalDigitsOnly,
-    parseNanpDigitsFromStored,
-    PHONE_COUNTRIES,
-} from '@/lib/phone-countries';
+import { PHONE_COUNTRIES } from '@/lib/phone-countries';
 import { cn } from '@/lib/utils';
 import type { Customer } from '@/types/customer';
+import CustomerController from '@/actions/App/Http/Controllers/CustomerController';
 
 const textareaClassName = cn(
     'border-input placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground flex min-h-[88px] w-full rounded-md border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none md:text-sm',
@@ -72,53 +64,8 @@ function CustomerFormFields({
 }) {
     const resolved = isEdit && customer ? customer : null;
     const initialCountry = resolved?.phone_country_name ?? 'United States';
-    const initialMeta = findPhoneCountryByName(initialCountry);
-    const initialNanp =
-        initialMeta !== undefined &&
-        countryUsesNanpMask(initialMeta.dialCode);
 
     const [countryName, setCountryName] = useState(initialCountry);
-    const selectedMeta = findPhoneCountryByName(countryName);
-    const isNanp =
-        selectedMeta !== undefined &&
-        countryUsesNanpMask(selectedMeta.dialCode);
-
-    const [nanpDigits, setNanpDigits] = useState(() => {
-        if (!resolved || !initialNanp) {
-            return '';
-        }
-
-        return parseNanpDigitsFromStored(resolved.phone_number);
-    });
-
-    const [intlPhone, setIntlPhone] = useState(() => {
-        if (!resolved || initialNanp) {
-            return '';
-        }
-
-        return resolved.phone_number;
-    });
-
-    const handleCountryChange = (name: string) => {
-        const prevMeta = findPhoneCountryByName(countryName);
-        const nextMeta = findPhoneCountryByName(name);
-        const prevNanp =
-            prevMeta !== undefined &&
-            countryUsesNanpMask(prevMeta.dialCode);
-        const nextNanp =
-            nextMeta !== undefined &&
-            countryUsesNanpMask(nextMeta.dialCode);
-        setCountryName(name);
-
-        if (prevNanp !== nextNanp) {
-            setNanpDigits('');
-            setIntlPhone('');
-        }
-    };
-
-    const phoneSubmitValue = isNanp
-        ? formatNanpStorage(nanpDigits)
-        : intlPhone;
 
     const err = (key: string) => pickError(errors, key);
 
@@ -167,7 +114,7 @@ function CustomerFormFields({
                     value={countryName}
                     readOnly
                 />
-                <Select value={countryName} onValueChange={handleCountryChange}>
+                <Select value={countryName} onValueChange={setCountryName}>
                     <SelectTrigger
                         id={`customer_phone_country_${idSuffix}`}
                         className="w-full max-w-full"
@@ -201,37 +148,18 @@ function CustomerFormFields({
                 <Label htmlFor={`customer_phone_number_${idSuffix}`}>
                     Phone
                 </Label>
-                <input
-                    type="hidden"
+                <Input
+                    id={`customer_phone_number_${idSuffix}`}
                     name="phone_number"
-                    value={phoneSubmitValue}
-                    readOnly
+                    type="text"
+                    inputMode="text"
+                    autoComplete="tel"
+                    required
+                    defaultValue={
+                        isEdit && customer ? customer.phone_number : undefined
+                    }
+                    aria-invalid={err('phone_number') ? true : undefined}
                 />
-                {isNanp ? (
-                    <Input
-                        id={`customer_phone_number_${idSuffix}`}
-                        type="text"
-                        inputMode="numeric"
-                        autoComplete="tel-national"
-                        value={formatNanpDisplay(nanpDigits)}
-                        onChange={(e) => {
-                            setNanpDigits(
-                                nationalDigitsOnly(e.target.value).slice(0, 10),
-                            );
-                        }}
-                        aria-invalid={err('phone_number') ? true : undefined}
-                    />
-                ) : (
-                    <Input
-                        id={`customer_phone_number_${idSuffix}`}
-                        type="tel"
-                        inputMode="tel"
-                        autoComplete="tel"
-                        value={intlPhone}
-                        onChange={(e) => setIntlPhone(e.target.value)}
-                        aria-invalid={err('phone_number') ? true : undefined}
-                    />
-                )}
                 <InputError message={err('phone_number')} />
             </div>
 
