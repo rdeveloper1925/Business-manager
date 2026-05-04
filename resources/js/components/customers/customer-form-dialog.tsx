@@ -1,6 +1,8 @@
 import { Form } from '@inertiajs/react';
 import { useState } from 'react';
+import CustomerController from '@/actions/App/Http/Controllers/CustomerController';
 import InputError from '@/components/input-error';
+import { PhoneCountryFlag } from '@/components/phone-country-flag';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -22,7 +24,6 @@ import {
 import { PHONE_COUNTRIES } from '@/lib/phone-countries';
 import { cn } from '@/lib/utils';
 import type { Customer } from '@/types/customer';
-import CustomerController from '@/actions/App/Http/Controllers/CustomerController';
 
 const textareaClassName = cn(
     'border-input placeholder:text-muted-foreground selection:bg-primary selection:text-primary-foreground flex min-h-[88px] w-full rounded-md border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none md:text-sm',
@@ -126,12 +127,10 @@ function CustomerFormFields({
                         {sortedPhoneCountries.map((c) => (
                             <SelectItem key={c.name} value={c.name}>
                                 <span className="flex items-center gap-2">
-                                    <span
-                                        aria-hidden
-                                        className="font-emoji-flag text-base leading-none"
-                                    >
-                                        {c.flag}
-                                    </span>
+                                    <PhoneCountryFlag
+                                        iso2={c.iso2}
+                                        className="text-base"
+                                    />
                                     <span className="text-muted-foreground font-mono text-xs">
                                         {c.dialCode}
                                     </span>

@@ -8,11 +8,11 @@ class PhoneCountry
 {
     private const DATA_PATH = 'resources/js/data/phone-countries.json';
 
-    /** @var list<array{name: string, iso2: string, dialCode: string, flag: string}>|null */
+    /** @var list<array{name: string, iso2: string, dialCode: string}>|null */
     private static ?array $cached = null;
 
     /**
-     * @return list<array{name: string, iso2: string, dialCode: string, flag: string}>
+     * @return list<array{name: string, iso2: string, dialCode: string}>
      */
     public static function all(): array
     {
@@ -31,7 +31,7 @@ class PhoneCountry
             throw new InvalidArgumentException('Phone countries data file is invalid.');
         }
 
-        /** @var list<array{name: string, iso2: string, dialCode: string, flag: string}> $decoded */
+        /** @var list<array{name: string, iso2: string, dialCode: string}> $decoded */
         self::$cached = $decoded;
 
         return self::$cached;
@@ -46,7 +46,7 @@ class PhoneCountry
     }
 
     /**
-     * @return array{name: string, iso2: string, dialCode: string, flag: string}|null
+     * @return array{name: string, iso2: string, dialCode: string}|null
      */
     public static function findByName(?string $name): ?array
     {
