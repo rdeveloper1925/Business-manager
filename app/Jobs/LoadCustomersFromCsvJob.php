@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Broadcasting\DataImportProgressNotifier;
 use App\Models\Customer;
 use App\Services\DataLoad\CustomerLoadService;
+use App\Support\DataImportCache;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,14 @@ class LoadCustomersFromCsvJob implements ShouldQueue
 
     private ?string $lastBroadcastSignature = null;
 
+    private int $rowsSinceLastBroadcast = 0;
+
+    private ?float $lastBroadcastAt = null;
+
+    private int $broadcastEveryRows = 50;
+
+    private int $lastProcessedOffset = 0;
+
     public function __construct(
         public string $importId,
         public string $absolutePath,
@@ -29,45 +38,50 @@ class LoadCustomersFromCsvJob implements ShouldQueue
     public function handle(): void
     {
         try {
+            $existingState = DataImportCache::get($this->userId, $this->importId);
+            $this->lastProcessedOffset = max(0, (int) ($existingState['last_processed_offset'] ?? 0));
+
             $this->updateState([
                 'user_id' => $this->userId,
                 'status' => 'processing',
                 'progress' => 0,
-                'processed' => 0,
+                'processed' => $this->lastProcessedOffset,
                 'total' => 0,
-                'rows_loaded' => 0,
+                'rows_loaded' => $this->lastProcessedOffset,
                 'message' => null,
             ], forceBroadcast: true);
 
             $total = $this->countDataRowsEligibleForImport();
+            $this->broadcastEveryRows = max(50, (int) ceil($total / 100));
+            $processed = min($this->lastProcessedOffset, $total);
 
             $this->updateState([
                 'user_id' => $this->userId,
                 'status' => 'processing',
-                'progress' => $total === 0 ? 100 : 0,
-                'processed' => 0,
+                'progress' => $total === 0 ? 100 : (int) round(($processed / max(1, $total)) * 100),
+                'processed' => $processed,
                 'total' => $total,
-                'rows_loaded' => 0,
+                'rows_loaded' => $processed,
                 'message' => null,
+                'last_processed_offset' => $processed,
             ], forceBroadcast: true);
 
-            if ($total === 0) {
+            if ($total === 0 || $processed >= $total) {
                 $this->updateState([
                     'user_id' => $this->userId,
                     'status' => 'success',
                     'progress' => 100,
-                    'processed' => 0,
-                    'total' => 0,
-                    'rows_loaded' => 0,
+                    'processed' => $total,
+                    'total' => $total,
+                    'rows_loaded' => $total,
                     'message' => null,
+                    'last_processed_offset' => $total,
                 ], forceBroadcast: true);
 
                 return;
             }
 
-            DB::transaction(function () use ($total): void {
-                $this->streamInsertValidatedRows($total);
-            });
+            $this->streamInsertValidatedRows($total);
 
             $this->updateState([
                 'user_id' => $this->userId,
@@ -77,6 +91,7 @@ class LoadCustomersFromCsvJob implements ShouldQueue
                 'total' => $total,
                 'rows_loaded' => $total,
                 'message' => null,
+                'last_processed_offset' => $total,
             ], forceBroadcast: true);
         } catch (ValidationException $e) {
             $message = collect($e->errors())->flatten()->first() ?? __('Validation failed.');
@@ -135,7 +150,8 @@ class LoadCustomersFromCsvJob implements ShouldQueue
         $expected = $opened['expected'];
         $now = now()->toDateTimeString();
         $buffer = [];
-        $processed = 0;
+        $processed = min($this->lastProcessedOffset, $total);
+        $rowsToSkip = $processed;
         $lineNumber = 1;
 
         try {
@@ -150,6 +166,12 @@ class LoadCustomersFromCsvJob implements ShouldQueue
                     throw ValidationException::withMessages([
                         'csv' => [__('Row :line has the wrong number of columns.', ['line' => $lineNumber])],
                     ]);
+                }
+
+                if ($rowsToSkip > 0) {
+                    $rowsToSkip--;
+
+                    continue;
                 }
 
                 /** @var array<string, string|null> $assoc */
@@ -188,7 +210,7 @@ class LoadCustomersFromCsvJob implements ShouldQueue
             if ($buffer !== []) {
                 $this->flushCustomerChunk($buffer, $now);
                 $processed += count($buffer);
-                $this->emitProgress($processed, $total);
+                $this->emitProgress($processed, $total, forceBroadcast: true);
             }
         } finally {
             fclose($handle);
@@ -216,12 +238,34 @@ class LoadCustomersFromCsvJob implements ShouldQueue
             ];
         }
 
-        Customer::insert($payload);
+        DB::transaction(function () use ($payload): void {
+            Customer::upsert(
+                $payload,
+                ['email'],
+                [
+                    'full_name',
+                    'organization_name',
+                    'phone_country_name',
+                    'phone_number',
+                    'address',
+                    'tax_id',
+                    'updated_at',
+                    'deleted_at',
+                ],
+            );
+        });
     }
 
-    private function emitProgress(int $processed, int $total): void
+    private function emitProgress(int $processed, int $total, bool $forceBroadcast = false): void
     {
         $progress = (int) round(($processed / $total) * 100);
+        $rowsProcessedSinceLastTick = max(0, $processed - $this->lastProcessedOffset);
+        $this->rowsSinceLastBroadcast += $rowsProcessedSinceLastTick;
+        $elapsedSeconds = $this->lastBroadcastAt === null ? INF : (microtime(true) - $this->lastBroadcastAt);
+        $shouldBroadcast = $forceBroadcast
+            || $this->lastBroadcastAt === null
+            || $this->rowsSinceLastBroadcast >= $this->broadcastEveryRows
+            || $elapsedSeconds >= 1.0;
 
         $this->updateState([
             'user_id' => $this->userId,
@@ -231,7 +275,8 @@ class LoadCustomersFromCsvJob implements ShouldQueue
             'total' => $total,
             'rows_loaded' => $processed,
             'message' => null,
-        ]);
+            'last_processed_offset' => $processed,
+        ], forceBroadcast: $shouldBroadcast, allowSignatureBroadcast: $shouldBroadcast);
     }
 
     /**
@@ -286,15 +331,20 @@ class LoadCustomersFromCsvJob implements ShouldQueue
     /**
      * @param  array<string, mixed>  $state
      */
-    private function updateState(array $state, bool $forceBroadcast = false): void
+    private function updateState(array $state, bool $forceBroadcast = false, bool $allowSignatureBroadcast = true): void
     {
+        $state['last_processed_offset'] = (int) ($state['last_processed_offset'] ?? $state['processed'] ?? $this->lastProcessedOffset);
+        $this->lastProcessedOffset = (int) $state['last_processed_offset'];
+
         $signature = ($state['status'] ?? '').'|'.((int) ($state['progress'] ?? 0));
-        $broadcast = $forceBroadcast || $signature !== $this->lastBroadcastSignature;
+        $broadcast = $forceBroadcast || ($allowSignatureBroadcast && $signature !== $this->lastBroadcastSignature);
 
         DataImportProgressNotifier::notify($this->userId, $this->importId, $state, $broadcast);
 
         if ($broadcast) {
             $this->lastBroadcastSignature = $signature;
+            $this->rowsSinceLastBroadcast = 0;
+            $this->lastBroadcastAt = microtime(true);
         }
     }
 
@@ -308,6 +358,7 @@ class LoadCustomersFromCsvJob implements ShouldQueue
             'total' => 0,
             'rows_loaded' => 0,
             'message' => $message,
+            'last_processed_offset' => 0,
         ], forceBroadcast: true);
     }
 }

@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import { demo as landingDemo, overview as landingOverview } from '@/routes/landing';
 import LandingLayout from './_layout';
 
 const channels = [
@@ -68,13 +69,13 @@ export default function LandingContactPage() {
                         </p>
                         <div className="mt-6 flex flex-wrap gap-4">
                             <Link
-                                href="/demo"
+                                href={landingDemo.url()}
                                 className="landing-btn-primary rounded-md px-5 py-3 text-sm font-semibold transition"
                             >
                                 Book a Demo
                             </Link>
                             <Link
-                                href="/overview"
+                                href={landingOverview.url()}
                                 className="landing-btn-secondary rounded-md border px-5 py-3 text-sm font-semibold transition"
                             >
                                 View Product Overview

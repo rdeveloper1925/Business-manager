@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Broadcasting\DataImportProgressNotifier;
+use App\Http\Requests\DataLoad\UploadCustomersRequest;
 use App\Models\Customer;
 use App\Services\DataLoad\CustomerLoadService;
 use App\Support\DataImportCache;
@@ -38,13 +39,9 @@ class DataLoaderController extends Controller
         return $this->customerLoadService->generateDataStructureTemplate();
     }
 
-    public function customersUpload(Request $request): JsonResponse
+    public function customersUpload(UploadCustomersRequest $request): JsonResponse
     {
         $this->authorize('create', Customer::class);
-
-        $request->validate([
-            'file' => ['required', 'file', 'mimes:csv,txt', 'max:10240'],
-        ]);
 
         $user = $request->user();
         if ($user === null) {

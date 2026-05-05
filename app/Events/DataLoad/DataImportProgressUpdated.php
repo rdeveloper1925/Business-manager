@@ -4,14 +4,16 @@ namespace App\Events\DataLoad;
 
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Contracts\Broadcasting\ShouldRescue;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class DataImportProgressUpdated implements ShouldBroadcastNow, ShouldRescue
+class DataImportProgressUpdated implements ShouldBroadcast, ShouldRescue
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
+
+    public string $broadcastQueue = 'broadcasts';
 
     /**
      * @param  array{user_id: int, status: string, progress: int, processed: int, total: int, rows_loaded: int, message: string|null}  $state

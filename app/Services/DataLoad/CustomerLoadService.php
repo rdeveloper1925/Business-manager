@@ -18,11 +18,6 @@ class CustomerLoadService
         return ['full_name', 'organization_name', 'phone_country_name', 'phone_number', 'email', 'address', 'tax_id'];
     }
 
-    public function loaderKey(): string
-    {
-        return 'customers';
-    }
-
     public function generateDataStructureTemplate(): StreamedResponse
     {
         $headers = self::expectedHeaders();

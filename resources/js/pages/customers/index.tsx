@@ -1,24 +1,22 @@
-import { Head, router, usePage } from '@inertiajs/react';
-import type { OnChangeFn, SortingState } from '@tanstack/react-table';
+import { Deferred, Head, usePage } from '@inertiajs/react';
 import { Search } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { CustomerFormDialog } from '@/components/customers/customer-form-dialog';
 import { CustomerProfileDialog } from '@/components/customers/customer-profile-dialog';
 import { createCustomerColumns } from '@/components/customers/customers-columns';
+import { CustomersPagination } from '@/components/customers/customers-pagination';
 import { DataTable } from '@/components/data-table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useDebouncedValue } from '@/hooks/use-debounced-value';
-import { customersIndexQuery } from '@/lib/customers-index-query';
-import { decodeHtmlEntities } from '@/lib/utils';
+import { useCustomerListQuery } from '@/hooks/use-customer-list-query';
+import { dashboard } from '@/routes';
+import { index as customersIndex } from '@/routes/customers';
 import type {
     Customer,
     CustomerListFilters,
     PaginatedCustomers,
 } from '@/types/customer';
-import { dashboard } from '@/routes';
-import { index as customersIndex } from '@/routes/customers';
 
 const CUSTOMER_STORE_ERROR_KEYS = [
     'full_name',
@@ -41,9 +39,22 @@ export default function CustomersIndex({
     profileCustomer: Customer | null;
     editCustomer: Customer | null;
 }) {
-    const [searchInput, setSearchInput] = useState(filters.search);
     const [createOpen, setCreateOpen] = useState(false);
-    const debouncedSearch = useDebouncedValue(searchInput, 300);
+    const {
+        searchInput,
+        setSearchInput,
+        sorting,
+        closeProfile,
+        navigateToEditCustomer,
+        openCreateModal,
+        handleFormDialogClose,
+        handleSortingChange,
+    } = useCustomerListQuery({
+        customers,
+        filters,
+        profileCustomer,
+        editCustomer,
+    });
 
     const pageErrors = usePage().props.errors as
         | Record<string, string | string[] | undefined>
@@ -64,88 +75,7 @@ export default function CustomersIndex({
         }
     }, [storeValidationSignature, editCustomer]);
 
-    useEffect(() => {
-        const trimmed = debouncedSearch.trim();
-
-        if (trimmed === filters.search) {
-            return;
-        }
-
-        router.get(
-            customersIndex.url({
-                query: customersIndexQuery(filters, {
-                    search: trimmed,
-                    page: 1,
-                    view: profileCustomer?.customer_id,
-                    edit: editCustomer?.customer_id,
-                }),
-            }),
-            {},
-            {
-                preserveState: true,
-                replace: true,
-                preserveScroll: true,
-            },
-        );
-    }, [debouncedSearch, filters, profileCustomer, editCustomer]);
-
-    const sorting = useMemo<SortingState>(
-        () => [
-            {
-                id: filters.sort,
-                desc: filters.direction === 'desc',
-            },
-        ],
-        [filters.sort, filters.direction],
-    );
-
-    const closeProfile = () => {
-        router.get(
-            customersIndex.url({
-                query: customersIndexQuery(filters, {
-                    search: searchInput.trim(),
-                    page:
-                        customers.current_page > 1
-                            ? customers.current_page
-                            : undefined,
-                    edit: editCustomer?.customer_id,
-                }),
-            }),
-            {},
-            {
-                preserveState: true,
-                preserveScroll: true,
-                replace: true,
-            },
-        );
-    };
-
-    const openCreateModal = () => {
-        if (editCustomer !== null || profileCustomer !== null) {
-            router.get(
-                customersIndex.url({
-                    query: customersIndexQuery(filters, {
-                        search: searchInput.trim(),
-                        page:
-                            customers.current_page > 1
-                                ? customers.current_page
-                                : undefined,
-                    }),
-                }),
-                {},
-                {
-                    preserveState: true,
-                    replace: true,
-                    preserveScroll: true,
-                    onSuccess: () => setCreateOpen(true),
-                },
-            );
-
-            return;
-        }
-
-        setCreateOpen(true);
-    };
+    const openCreateModalDialog = () => openCreateModal(() => setCreateOpen(true));
 
     const handleFormDialogOpenChange = (open: boolean) => {
         if (open) {
@@ -153,101 +83,8 @@ export default function CustomersIndex({
         }
 
         setCreateOpen(false);
-
-        if (editCustomer !== null) {
-            router.get(
-                customersIndex.url({
-                    query: customersIndexQuery(filters, {
-                        search: searchInput.trim(),
-                        page:
-                            customers.current_page > 1
-                                ? customers.current_page
-                                : undefined,
-                        view: profileCustomer?.customer_id,
-                    }),
-                }),
-                {},
-                {
-                    preserveState: true,
-                    preserveScroll: true,
-                    replace: true,
-                },
-            );
-        }
+        handleFormDialogClose();
     };
-
-    const navigateToEditCustomer = useCallback(
-        (customer: Customer) => {
-            router.get(
-                customersIndex.url({
-                    query: customersIndexQuery(filters, {
-                        search: searchInput.trim(),
-                        page:
-                            customers.current_page > 1
-                                ? customers.current_page
-                                : undefined,
-                        edit: customer.customer_id,
-                    }),
-                }),
-                {},
-                {
-                    preserveState: true,
-                    preserveScroll: true,
-                },
-            );
-        },
-        [filters, searchInput, customers.current_page],
-    );
-
-    const handleSortingChange: OnChangeFn<SortingState> = useCallback(
-        (updater) => {
-            const nextSorting =
-                typeof updater === 'function' ? updater(sorting) : updater;
-            const sortColumn = nextSorting[0];
-
-            if (!sortColumn) {
-                return;
-            }
-
-            const columnId = sortColumn.id;
-
-            if (
-                columnId !== 'full_name' &&
-                columnId !== 'phone_number' &&
-                columnId !== 'email'
-            ) {
-                return;
-            }
-
-            const sort = columnId;
-            const direction = sortColumn.desc ? 'desc' : 'asc';
-            router.get(
-                customersIndex.url({
-                    query: customersIndexQuery(filters, {
-                        search: searchInput.trim(),
-                        sort,
-                        direction,
-                        page: 1,
-                        view: profileCustomer?.customer_id,
-                        edit: editCustomer?.customer_id,
-                    }),
-                }),
-                {},
-                {
-                    preserveState: true,
-                    replace: true,
-                    preserveScroll: true,
-                },
-            );
-        },
-        [
-            sorting,
-            filters,
-            searchInput,
-            profileCustomer?.customer_id,
-            editCustomer?.customer_id,
-        ],
-    );
 
     const columns = useMemo(
         () =>
@@ -269,11 +106,18 @@ export default function CustomersIndex({
         <>
             <Head title="Customers" />
 
-            <CustomerProfileDialog
-                customer={profileCustomer}
-                onClose={closeProfile}
-                onEditCustomer={navigateToEditCustomer}
-            />
+            <Deferred
+                data="profileCustomer"
+                fallback={
+                    <div className="mx-4 h-16 animate-pulse rounded-lg border bg-muted/40" />
+                }
+            >
+                <CustomerProfileDialog
+                    customer={profileCustomer}
+                    onClose={closeProfile}
+                    onEditCustomer={navigateToEditCustomer}
+                />
+            </Deferred>
 
             <CustomerFormDialog
                 open={formModalOpen}
@@ -291,7 +135,7 @@ export default function CustomersIndex({
                             Manage customer records
                         </p>
                     </div>
-                    <Button type="button" onClick={openCreateModal}>
+                    <Button type="button" onClick={openCreateModalDialog}>
                         Add customer
                     </Button>
                 </div>
@@ -329,7 +173,10 @@ export default function CustomersIndex({
                             <p className="text-center text-sm text-muted-foreground">
                                 No customers yet. Create one to get started.
                             </p>
-                            <Button type="button" onClick={openCreateModal}>
+                            <Button
+                                type="button"
+                                onClick={openCreateModalDialog}
+                            >
                                 Add customer
                             </Button>
                         </div>
@@ -349,57 +196,7 @@ export default function CustomersIndex({
                     )}
                 </div>
 
-                {customers.last_page > 1 && (
-                    <nav
-                        className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center"
-                        aria-label="Pagination"
-                    >
-                        <div className="flex flex-wrap items-center justify-center gap-1">
-                            {customers.links.map((link, i) => {
-                                if (link.label === '...') {
-                                    return (
-                                        <span
-                                            key={`ellipsis-${i}`}
-                                            className="px-2 text-sm text-muted-foreground"
-                                            aria-hidden
-                                        >
-                                            …
-                                        </span>
-                                    );
-                                }
-
-                                return (
-                                    <Button
-                                        key={`${link.label}-${i}`}
-                                        type="button"
-                                        variant={
-                                            link.active ? 'default' : 'outline'
-                                        }
-                                        size="sm"
-                                        disabled={link.url === null}
-                                        aria-current={
-                                            link.active ? 'page' : undefined
-                                        }
-                                        onClick={() => {
-                                            if (link.url) {
-                                                router.get(
-                                                    link.url,
-                                                    {},
-                                                    {
-                                                        preserveState: true,
-                                                        preserveScroll: true,
-                                                    },
-                                                );
-                                            }
-                                        }}
-                                    >
-                                        {decodeHtmlEntities(link.label)}
-                                    </Button>
-                                );
-                            })}
-                        </div>
-                    </nav>
-                )}
+                <CustomersPagination customers={customers} />
             </div>
         </>
     );

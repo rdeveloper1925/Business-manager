@@ -54,7 +54,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                                     'bg-muted': isCurrentOrParentUrl(item.href),
                                 })}
                             >
-                                <Link href={item.href}>
+                                <Link href={item.href} prefetch="hover">
                                     {item.icon && (
                                         <item.icon className="h-4 w-4" />
                                     )}

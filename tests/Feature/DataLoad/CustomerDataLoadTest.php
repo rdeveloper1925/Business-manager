@@ -61,7 +61,7 @@ class CustomerDataLoadTest extends TestCase
             ])
             ->assertUnprocessable();
 
-        Queue::assertNothingPushed();
+        Queue::assertNotPushed(LoadCustomersFromCsvJob::class);
         $this->assertSame(
             [],
             Storage::disk('local')->files('tmp/imports'),
