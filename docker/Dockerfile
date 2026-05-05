@@ -148,9 +148,6 @@ RUN chown -R www-data:www-data /var/www
 # Always run entrypoint first (migrations, config:cache, route:cache), then process from CMD.
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-# Local Compose maps APP_PORT:80; Railway injects PORT — entrypoint retargets Apache to PORT.
-EXPOSE 80
-
 # Hit whatever port Apache is bound to (PORT at runtime on Railway, else 80).
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
     CMD /usr/local/bin/apache-healthcheck.sh
