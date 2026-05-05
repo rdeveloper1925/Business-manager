@@ -12,18 +12,18 @@ import { Input } from '@/components/ui/input';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { customersIndexQuery } from '@/lib/customers-index-query';
 import { decodeHtmlEntities } from '@/lib/utils';
-import { dashboard } from '@/routes';
-import { index as customersIndex } from '@/routes/customers';
 import type {
     Customer,
     CustomerListFilters,
     PaginatedCustomers,
 } from '@/types/customer';
+import { dashboard } from '@/routes';
+import { index as customersIndex } from '@/routes/customers';
 
 const CUSTOMER_STORE_ERROR_KEYS = [
     'full_name',
     'organization_name',
-    'phone_country_name',
+    'country',
     'phone_number',
     'email',
     'address',

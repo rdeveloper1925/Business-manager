@@ -102,7 +102,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Ship startup script (migrations, Laravel caches, then exec CMD).
 COPY ./docker/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY ./docker/apache-healthcheck.sh /usr/local/bin/apache-healthcheck.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/apache-healthcheck.sh
 
 # Apache vhost: DocumentRoot public/, AllowOverride for Laravel .htaccess.
 COPY ./docker/000-default.conf /etc/apache2/sites-available/000-default.conf
@@ -134,12 +135,12 @@ RUN chown -R www-data:www-data /var/www
 # Always run entrypoint first (migrations, config:cache, route:cache), then process from CMD.
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
-# Document that the container listens on HTTP port 80 (Compose maps APP_PORT:80).
+# Local Compose maps APP_PORT:80; Railway injects PORT — entrypoint retargets Apache to PORT.
 EXPOSE 80
 
-# Mark unhealthy if the app does not respond over HTTP inside the container.
+# Hit whatever port Apache is bound to (PORT at runtime on Railway, else 80).
 HEALTHCHECK --interval=10s --timeout=5s --retries=3 \
-    CMD curl -fsS http://127.0.0.1/ >/dev/null || exit 1
+    CMD /usr/local/bin/apache-healthcheck.sh
 
 # Default process after entrypoint: Apache in foreground (PID 1) so Docker tracks the server lifecycle.
 CMD ["apache2-foreground"]

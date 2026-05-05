@@ -8,11 +8,11 @@ import {
     TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { customersIndexQuery } from '@/lib/customers-index-query';
+import type { Customer, CustomerListFilters } from '@/types/customer';
 import {
     destroy as customersDestroy,
     index as customersIndex,
 } from '@/routes/customers';
-import type { Customer, CustomerListFilters } from '@/types/customer';
 
 export function CustomerRowActions({
     customer,

@@ -2,12 +2,6 @@ import { Head } from '@inertiajs/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
-import {
-    customersPage,
-    customersTemplate,
-    customersUpload,
-    status as statusRoute,
-} from '@/actions/App/Http/Controllers/DataLoaderController';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -21,6 +15,12 @@ import { Label } from '@/components/ui/label';
 import { getEcho } from '@/echo';
 import { xsrfToken } from '@/lib/csrf';
 import { cn } from '@/lib/utils';
+import {
+    customersPage,
+    customersTemplate,
+    customersUpload,
+    status as statusRoute,
+} from '@/actions/App/Http/Controllers/DataLoaderController';
 import { dashboard } from '@/routes';
 
 type ImportStatusResponse = {
@@ -206,6 +206,7 @@ export default function CustomerDataLoad() {
         if (echo === null) {
             return () => {
                 cancelled = true;
+
                 if (pollTimer !== null) {
                     clearInterval(pollTimer);
                     pollTimer = null;
@@ -239,6 +240,7 @@ export default function CustomerDataLoad() {
             cancelled = true;
             channel.stopListening(PROGRESS_EVENT);
             echo.leave(channelName);
+
             if (pollTimer !== null) {
                 clearInterval(pollTimer);
                 pollTimer = null;

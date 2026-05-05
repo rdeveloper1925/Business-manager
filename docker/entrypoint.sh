@@ -98,5 +98,33 @@ touch /var/www/storage/logs/laravel.log
 chown www-data:www-data /var/www/storage/logs/laravel.log
 chmod 664 /var/www/storage/logs/laravel.log
 
+# Railway and similar platforms set PORT; the edge proxy forwards to that port inside the
+# container. Apache defaults to :80 only — align Listen + VirtualHost with PORT (default 80).
+configure_apache_http_port() {
+    APACHE_HTTP_PORT="${PORT:-80}"
+    export APACHE_HTTP_PORT
+    if [ -f /etc/apache2/ports.conf ]; then
+        sed -i "s/^Listen 80\$/Listen ${APACHE_HTTP_PORT}/" /etc/apache2/ports.conf
+    fi
+    if [ -f /etc/apache2/sites-available/000-default.conf ]; then
+        sed -i "s/<VirtualHost \\*:80>/<VirtualHost *:${APACHE_HTTP_PORT}>/" /etc/apache2/sites-available/000-default.conf
+    fi
+}
+
+# Bold + reverse video: where the web app is bound and what Laravel thinks the URL is.
+# Only the Apache foreground process serves HTTP; queue/reverb use the same image with other CMDs.
+if [ "${1:-}" = "apache2-foreground" ]; then
+    configure_apache_http_port
+    printf '\n\033[1;7m================================================================\033[0m\n'
+    printf '\033[1;7m  >>>  APPLICATION HTTP ENDPOINT  <<<\033[0m\n'
+    printf '\033[1;7m================================================================\033[0m\n'
+    printf '\033[1m  Configured application URL (APP_URL):\033[0m %s\n' "${APP_URL:-<not set>}"
+    printf '\033[1m  HTTP listen port (inside this container):\033[0m %s (from PORT, default 80)\n' "${APACHE_HTTP_PORT}"
+    if [ -n "${APP_PORT:-}" ]; then
+        printf '\033[1m  Docker published host port (APP_PORT):\033[0m %s\n' "${APP_PORT}"
+    fi
+    printf '\033[1;7m================================================================\033[0m\n\n'
+fi
+
 # Run the default command
 exec "$@"

@@ -41,6 +41,7 @@ function resolveConfig() {
         runtime.port ??
         (() => {
             const envPort = import.meta.env.VITE_REVERB_PORT;
+
             if (envPort === undefined || envPort === '') {
                 return scheme === 'https' ? 443 : 80;
             }

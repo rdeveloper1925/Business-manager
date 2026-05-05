@@ -8,6 +8,7 @@ import {
     UserRound,
 } from 'lucide-react';
 import type { ComponentType, ReactNode } from 'react';
+import { PhoneCountryFlag } from '@/components/phone-country-flag';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -163,17 +164,14 @@ export function CustomerProfileDialog({
                                 const row = findPhoneCountryByName(
                                     customer.phone_country_name,
                                 );
-                                const flag = row?.flag ?? '';
 
                                 return (
                                     <span className="inline-flex flex-wrap items-center gap-2">
-                                        {flag ? (
-                                            <span
-                                                aria-hidden
-                                                className="font-emoji-flag text-foreground text-lg leading-none"
-                                            >
-                                                {flag}
-                                            </span>
+                                        {row ? (
+                                            <PhoneCountryFlag
+                                                iso2={row.iso2}
+                                                className="text-foreground text-lg"
+                                            />
                                         ) : null}
                                         <span className="font-medium">
                                             {display(customer.phone_country_name)}
