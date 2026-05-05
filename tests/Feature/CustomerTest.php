@@ -188,21 +188,29 @@ class CustomerTest extends TestCase
         ]);
     }
 
-    public function test_store_rejects_malformed_nanp_phone(): void
+    public function test_store_accepts_free_form_phone_number(): void
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user)
+        $response = $this->actingAs($user)
             ->post(route('customers.store'), [
-                'full_name' => 'Bad Phone',
+                'full_name' => 'Free Form Phone',
                 'organization_name' => null,
                 'phone_country_name' => 'United States',
                 'phone_number' => '555-010-0100',
-                'email' => 'badphone@example.com',
+                'email' => 'freeformphone@example.com',
                 'address' => '1 Main St',
                 'tax_id' => null,
-            ])
-            ->assertSessionHasErrors('phone_number');
+            ]);
+
+        $customer = Customer::where('email', 'freeformphone@example.com')->firstOrFail();
+
+        $response->assertRedirect(route('customers.index', ['view' => $customer->customer_id]));
+
+        $this->assertDatabaseHas('customers', [
+            'email' => 'freeformphone@example.com',
+            'phone_number' => '555-010-0100',
+        ]);
     }
 
     public function test_store_rejects_unknown_phone_country_name(): void
@@ -222,11 +230,11 @@ class CustomerTest extends TestCase
             ->assertSessionHasErrors('phone_country_name');
     }
 
-    public function test_store_rejects_international_phone_with_too_few_digits(): void
+    public function test_store_accepts_short_phone_as_plain_text(): void
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user)
+        $response = $this->actingAs($user)
             ->post(route('customers.store'), [
                 'full_name' => 'Short Intl',
                 'organization_name' => null,
@@ -235,7 +243,15 @@ class CustomerTest extends TestCase
                 'email' => 'shortintl@example.com',
                 'address' => '1 Main St',
                 'tax_id' => null,
-            ])
-            ->assertSessionHasErrors('phone_number');
+            ]);
+
+        $customer = Customer::where('email', 'shortintl@example.com')->firstOrFail();
+
+        $response->assertRedirect(route('customers.index', ['view' => $customer->customer_id]));
+
+        $this->assertDatabaseHas('customers', [
+            'email' => 'shortintl@example.com',
+            'phone_number' => '12345',
+        ]);
     }
 }

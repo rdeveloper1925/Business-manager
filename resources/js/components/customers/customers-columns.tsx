@@ -1,6 +1,7 @@
 import type { ColumnDef } from '@tanstack/react-table';
 
 import { CustomerRowActions } from '@/components/customers/customer-row-actions';
+import { PhoneCountryFlag } from '@/components/phone-country-flag';
 import { DataTableColumnHeader } from '@/components/ui/data-table-column-header';
 import { findPhoneCountryByName } from '@/lib/phone-countries';
 import type { Customer, CustomerListFilters } from '@/types/customer';
@@ -22,22 +23,21 @@ export function createCustomerColumns(context: {
             ),
             cell: ({ row }) => {
                 const customer = row.original;
-                const flag = findPhoneCountryByName(
+                const phoneCountry = findPhoneCountryByName(
                     customer.phone_country_name,
-                )?.flag;
+                );
 
                 return (
                     <span className="inline-flex items-center gap-2">
                         <span className="font-medium">
                             {row.getValue('full_name')}
                         </span>
-                        {flag ? (
-                            <span
-                                aria-hidden
-                                className="font-emoji-flag shrink-0 text-base leading-none"
-                                title={customer.phone_country_name}
-                            >
-                                {flag}
+                        {phoneCountry ? (
+                            <span title={customer.phone_country_name}>
+                                <PhoneCountryFlag
+                                    iso2={phoneCountry.iso2}
+                                    className="shrink-0 text-base"
+                                />
                             </span>
                         ) : null}
                     </span>

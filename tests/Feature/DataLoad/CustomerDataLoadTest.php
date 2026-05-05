@@ -148,7 +148,7 @@ class CustomerDataLoadTest extends TestCase
         ]);
     }
 
-    public function test_sync_import_defaults_unknown_phone_country_to_canada_and_nanp_rules(): void
+    public function test_sync_import_defaults_unknown_phone_country_to_canada(): void
     {
         $user = User::factory()->create();
 
@@ -166,6 +166,26 @@ class CustomerDataLoadTest extends TestCase
             'email' => 'pat@example.com',
             'phone_country_name' => 'Canada',
             'phone_number' => '(416)-555-0100',
+        ]);
+    }
+
+    public function test_sync_import_accepts_non_numeric_phone_as_text(): void
+    {
+        $user = User::factory()->create();
+
+        $headers = implode(',', CustomerLoadService::expectedHeaders());
+        $csv = $headers."\nSam Text,,United States,Reception x501,samtext@example.com,9 Elm St,";
+        $file = UploadedFile::fake()->createWithContent('text-phone.csv', $csv);
+
+        $this->actingAs($user)
+            ->postJson(route('data-load.customers.upload'), [
+                'file' => $file,
+            ])
+            ->assertOk();
+
+        $this->assertDatabaseHas('customers', [
+            'email' => 'samtext@example.com',
+            'phone_number' => 'Reception x501',
         ]);
     }
 
