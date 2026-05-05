@@ -27,6 +27,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libpq-dev \
     && docker-php-ext-install -j"$(nproc)" \
     pdo_pgsql \
+    pgsql \
     intl \
     zip \
     bcmath \
