@@ -24,10 +24,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libcurl4-openssl-dev \
     libicu-dev \
     libzip-dev \
-    libpq-dev \
     && docker-php-ext-install -j"$(nproc)" \
-    pdo_pgsql \
-    pgsql \
     intl \
     zip \
     bcmath \
@@ -120,10 +117,19 @@ RUN a2enmod rewrite && a2enconf -q servername
 
 COPY ./storage /var/www/storage-init
 
-# Reuse compiled PHP extensions and their conf.d snippets from builder (same PHP major.minor).
+# Reuse compiled PHP extensions from the CLI builder (intl, zip, etc.). PostgreSQL drivers are
+# installed below on this Apache image so .so modules match mod_php (avoid copying CLI-built pgsql).
 COPY --from=builder /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
 COPY --from=builder /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
 COPY --from=builder /usr/local/bin/docker-php-ext-* /usr/local/bin/
+
+# Build pdo_pgsql + pgsql against this image's PHP/Apache SAPI (not copied from php:8.4-cli).
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends libpq-dev \
+    && docker-php-ext-install -j"$(nproc)" pdo_pgsql pgsql \
+    && apt-get purge -y libpq-dev \
+    && apt-get autoremove -y && apt-get clean && rm -rf /tmp/* /var/tmp/*
 
 # Use production php.ini defaults (opcache, error display, etc.).
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
