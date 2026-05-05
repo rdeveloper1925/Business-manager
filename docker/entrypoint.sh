@@ -101,15 +101,34 @@ chmod 664 /var/www/storage/logs/laravel.log
 # Railway and similar platforms set PORT; the edge proxy forwards to that port inside the
 # container. Apache defaults to :80 only — align Listen + VirtualHost with PORT (default 80).
 configure_apache_http_port() {
-    APACHE_HTTP_PORT="${PORT:-80}"
-    export APACHE_HTTP_PORT
+    PORT="${PORT:-80}"
+    echo "Configuring Apache to use port ${PORT}"
+
+    # Update ports.conf (loose match)
     if [ -f /etc/apache2/ports.conf ]; then
-        sed -i "s/^Listen 80\$/Listen ${APACHE_HTTP_PORT}/" /etc/apache2/ports.conf
+        sed -i "s/Listen .*/Listen ${PORT}/g" /etc/apache2/ports.conf
     fi
-    if [ -f /etc/apache2/sites-available/000-default.conf ]; then
-        sed -i "s/<VirtualHost \\*:80>/<VirtualHost *:${APACHE_HTTP_PORT}>/" /etc/apache2/sites-available/000-default.conf
-    fi
+
+    # Update BOTH available and enabled configs
+    for f in \
+        /etc/apache2/sites-available/000-default.conf \
+        /etc/apache2/sites-enabled/000-default.conf
+    do
+        if [ -f "$f" ]; then
+            sed -i "s/<VirtualHost \*:.*>/<VirtualHost *:${PORT}>/g" "$f"
+        fi
+    done
 }
+
+# Railway provides PORT; default to 80 locally
+PORT="${PORT:-80}"
+
+echo "Configuring Apache to listen on port ${PORT}..."
+
+# Replace port 80 with $PORT
+sed -i "s/Listen 80/Listen ${PORT}/g" /etc/apache2/ports.conf
+sed -i "s/:80>/:${PORT}>/g" /etc/apache2/sites-available/000-default.conf
+sed -i "s/:80>/:${PORT}>/g" /etc/apache2/sites-enabled/000-default.conf
 
 # Bold + reverse video: where the web app is bound and what Laravel thinks the URL is.
 # Only the Apache foreground process serves HTTP; queue/reverb use the same image with other CMDs.
