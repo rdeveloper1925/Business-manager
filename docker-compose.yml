@@ -1,6 +1,8 @@
 services:
   app:
     container_name: bm-app
+    # Single build for app/queue/reverb; other services reuse this tag (pull_policy: never).
+    image: bm-app:latest
     build:
       context: .
       dockerfile: ./docker/Dockerfile
@@ -39,13 +41,8 @@ services:
   # Processes ShouldQueue jobs (e.g. CSV import). Without this, imports stay "pending" forever.
   queue:
     container_name: bm-queue
-    build:
-      context: .
-      dockerfile: ./docker/Dockerfile
-      target: production
-      args:
-        PHP_BUILD_IMAGE: ${PHP_BUILD_IMAGE:-mirror.gcr.io/library/php:8.4-cli}
-        PHP_RUNTIME_IMAGE: ${PHP_RUNTIME_IMAGE:-mirror.gcr.io/library/php:8.4-apache}
+    image: bm-app:latest
+    pull_policy: never
     restart: unless-stopped
     volumes:
       - bm-app-storage:/var/www/storage
@@ -58,6 +55,8 @@ services:
     networks:
       - bm-network
     depends_on:
+      app:
+        condition: service_started
       reverb:
         condition: service_healthy
     command:
@@ -73,13 +72,8 @@ services:
 
   reverb:
     container_name: bm-reverb
-    build:
-      context: .
-      dockerfile: ./docker/Dockerfile
-      target: production
-      args:
-        PHP_BUILD_IMAGE: ${PHP_BUILD_IMAGE:-mirror.gcr.io/library/php:8.4-cli}
-        PHP_RUNTIME_IMAGE: ${PHP_RUNTIME_IMAGE:-mirror.gcr.io/library/php:8.4-apache}
+    image: bm-app:latest
+    pull_policy: never
     restart: unless-stopped
     volumes:
       - bm-app-storage:/var/www/storage
