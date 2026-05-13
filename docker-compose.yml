@@ -22,11 +22,12 @@ services:
     env_file:
       - .env
     environment:
-      # Must match Reverb's listen port inside the network (reverb:start --port / REVERB_SERVER_PORT).
-      # Do not use .env REVERB_PORT here — it is often 8080 for local `reverb:start`, which breaks Docker.
+      # Laravel→Reverb on Docker must use REVERB_SERVER_PORT (listen port), not necessarily REVERB_PORT from .env,
+      # which is often host/browser-facing (see .env.example).
       REVERB_HOST: ${DOCKER_REVERB_HOST:-reverb}
-      REVERB_PORT: '8015'
+      REVERB_PORT: ${REVERB_SERVER_PORT:-8015}
       REVERB_SCHEME: ${REVERB_SCHEME:-http}
+      REDIS_HOST: redis
     networks:
       - bm-network
     healthcheck:
@@ -35,6 +36,8 @@ services:
       timeout: 5s
       retries: 3
     depends_on:
+      redis:
+        condition: service_healthy
       reverb:
         condition: service_healthy
 
@@ -50,13 +53,16 @@ services:
       - .env
     environment:
       REVERB_HOST: ${DOCKER_REVERB_HOST:-reverb}
-      REVERB_PORT: '8015'
+      REVERB_PORT: ${REVERB_SERVER_PORT:-8015}
       REVERB_SCHEME: ${REVERB_SCHEME:-http}
+      REDIS_HOST: redis
     networks:
       - bm-network
     depends_on:
       app:
         condition: service_started
+      redis:
+        condition: service_healthy
       reverb:
         condition: service_healthy
     command:
@@ -68,7 +74,22 @@ services:
       - HOME=/var/www
       - sh
       - -c
-      - cd /var/www && exec php artisan queue:work --sleep=3 --tries=3 --max-time=3600
+      - cd /var/www && exec php artisan queue:work --queue=broadcasts,default --sleep=3 --tries=3 --timeout=300 --max-time=3600
+
+  redis:
+    container_name: bm-redis
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - bm-redis-data:/data
+    networks:
+      - bm-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   reverb:
     container_name: bm-reverb
@@ -82,15 +103,19 @@ services:
     environment:
       LARAVEL_CONTAINER_ROLE: reverb
       REVERB_SERVER_HOST: 0.0.0.0
-      REVERB_SERVER_PORT: 8015
+      REVERB_SERVER_PORT: ${REVERB_SERVER_PORT:-8015}
     networks:
       - bm-network
     ports:
-      - "${REVERB_PORT:-8015}:8015"
+      - "${REVERB_PORT:-8015}:${REVERB_SERVER_PORT:-8015}"
     # TCP open on WebSocket port (must match REVERB_SERVER_PORT / reverb:start --port).
     # Bash /dev/tcp avoids Compose $$ escaping bugs with php -r healthchecks.
     healthcheck:
-      test: ['CMD-SHELL', "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8015' || exit 1"]
+      test:
+        [
+          'CMD-SHELL',
+          "bash -c 'exec 3<>/dev/tcp/127.0.0.1/${REVERB_SERVER_PORT:-8015}' || exit 1",
+        ]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -104,7 +129,7 @@ services:
       - HOME=/var/www
       - sh
       - -c
-      - cd /var/www && exec php artisan reverb:start --host=0.0.0.0 --port=8015
+      - cd /var/www && exec php artisan reverb:start --host=0.0.0.0 --port=${REVERB_SERVER_PORT:-8015}
 
 networks:
   bm-network:
@@ -112,3 +137,4 @@ networks:
 
 volumes:
   bm-app-storage:
+  bm-redis-data:

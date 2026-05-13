@@ -5,7 +5,7 @@ use App\Support\DataImportCache;
 use Illuminate\Support\Facades\Broadcast;
 
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
-    return (int) $user->id === (int) $id;
+    return (string) $user->id === (string) $id;
 });
 
 Broadcast::channel('data-import.{importId}', function (User $user, string $importId) {
@@ -14,5 +14,5 @@ Broadcast::channel('data-import.{importId}', function (User $user, string $impor
         return false;
     }
 
-    return (int) ($data['user_id'] ?? 0) === $user->id;
+    return (string) ($data['user_id'] ?? '') === (string) $user->id;
 });

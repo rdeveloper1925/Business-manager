@@ -1,6 +1,12 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { Moon, Sun } from 'lucide-react';
 import { useAppearance } from '@/hooks/use-appearance';
+import { home } from '@/routes';
+import {
+    contact as landingContact,
+    demo as landingDemo,
+    overview as landingOverview,
+} from '@/routes/landing';
 
 type NavigationItem = {
     href: string;
@@ -8,10 +14,10 @@ type NavigationItem = {
 };
 
 const navigation: NavigationItem[] = [
-    { href: '/', label: 'Home' },
-    { href: '/overview', label: 'Product' },
-    { href: '/demo', label: 'Request Demo' },
-    { href: '/contact', label: 'Contact' },
+    { href: home.url(), label: 'Home' },
+    { href: landingOverview.url(), label: 'Product' },
+    { href: landingDemo.url(), label: 'Request Demo' },
+    { href: landingContact.url(), label: 'Contact' },
 ];
 
 function LandingThemeToggle() {
@@ -80,7 +86,11 @@ export default function LandingLayout({
 
                 <header className="sticky top-0 z-20 border-b border-[var(--landing-border)] bg-[color-mix(in_oklab,var(--landing-surface)_90%,transparent)] backdrop-blur">
                     <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-4 lg:px-8">
-                        <Link href="/" className="group inline-flex items-center gap-3 landing-animate-up">
+                        <Link
+                            href={home.url()}
+                            prefetch="hover"
+                            className="group inline-flex items-center gap-3 landing-animate-up"
+                        >
                             <span className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-[var(--landing-primary)] font-semibold text-white shadow-md ring-2 ring-[color-mix(in_oklab,var(--landing-primary)_35%,transparent)]">
                                 BM
                             </span>
@@ -94,6 +104,7 @@ export default function LandingLayout({
                                     <Link
                                         key={item.href}
                                         href={item.href}
+                                        prefetch="hover"
                                         className={`rounded-md px-3 py-2 text-sm transition ${
                                             url === item.href
                                                 ? 'bg-[var(--landing-primary)] text-white shadow-sm'
@@ -115,13 +126,25 @@ export default function LandingLayout({
                     <div className="mx-auto flex w-full max-w-7xl flex-col gap-3 px-6 py-8 text-sm landing-copy lg:flex-row lg:items-center lg:justify-between lg:px-8">
                         <p>Business Manager Platform for Operations and Finance Teams</p>
                         <div className="flex items-center gap-5">
-                            <Link href="/overview" className="transition hover:text-[var(--landing-text)]">
+                            <Link
+                                href={landingOverview.url()}
+                                prefetch="hover"
+                                className="transition hover:text-[var(--landing-text)]"
+                            >
                                 Product
                             </Link>
-                            <Link href="/demo" className="transition hover:text-[var(--landing-text)]">
+                            <Link
+                                href={landingDemo.url()}
+                                prefetch="hover"
+                                className="transition hover:text-[var(--landing-text)]"
+                            >
                                 Demo
                             </Link>
-                            <Link href="/contact" className="transition hover:text-[var(--landing-text)]">
+                            <Link
+                                href={landingContact.url()}
+                                prefetch="hover"
+                                className="transition hover:text-[var(--landing-text)]"
+                            >
                                 Contact
                             </Link>
                         </div>

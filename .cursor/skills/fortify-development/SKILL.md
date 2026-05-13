@@ -42,7 +42,7 @@ Enable in `config/fortify.php` features array:
 ```
 - [ ] Add TwoFactorAuthenticatable trait to User model
 - [ ] Enable feature in config/fortify.php
-- [ ] If the `*_add_two_factor_columns_to_users_table.php` migration is missing, publish via `php artisan vendor:publish --tag=fortify-migrations` and migrate
+- [ ] Ensure two-factor columns exist on `users`: this repo defines `two_factor_secret`, `two_factor_recovery_codes`, and `two_factor_confirmed_at` in `database/migrations/0001_01_01_000000_create_users_table.php`. If they are missing in your app, publish Fortify’s stub with `php artisan vendor:publish --tag=fortify-migrations`, then merge those columns into your `create_users_table` migration (preferred) instead of keeping a separate `Schema::table` migration
 - [ ] Set up view callbacks in FortifyServiceProvider
 - [ ] Create 2FA management UI
 - [ ] Test QR code and recovery codes

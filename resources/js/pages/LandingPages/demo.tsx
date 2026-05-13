@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import { contact as landingContact, overview as landingOverview } from '@/routes/landing';
 import LandingLayout from './_layout';
 
 const demoTopics = [
@@ -87,13 +88,13 @@ export default function LandingDemoPage() {
                         </div>
                         <div className="mt-6 flex flex-wrap gap-3">
                             <Link
-                                href="/contact"
+                                href={landingContact.url()}
                                 className="landing-btn-primary rounded-md px-4 py-2.5 text-sm font-semibold transition"
                             >
                                 Contact Sales
                             </Link>
                             <Link
-                                href="/overview"
+                                href={landingOverview.url()}
                                 className="landing-btn-secondary rounded-md border px-4 py-2.5 text-sm font-semibold transition"
                             >
                                 Review Features

@@ -10,9 +10,9 @@ final class DataImportProgressNotifier
     /**
      * Persist import state and optionally push it to the authenticated owner's private channel.
      *
-     * @param  array{user_id: int, status: string, progress: int, processed: int, total: int, rows_loaded: int, message: string|null}  $state
+     * @param  array{user_id: int|string, status: string, progress: int, processed: int, total: int, rows_loaded: int, message: string|null}  $state
      */
-    public static function notify(int $userId, string $importId, array $state, bool $broadcast = true): void
+    public static function notify(int|string $userId, string $importId, array $state, bool $broadcast = true): void
     {
         DataImportCache::put($userId, $importId, $state);
 

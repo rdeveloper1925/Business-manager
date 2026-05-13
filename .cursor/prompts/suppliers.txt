@@ -1,0 +1,24 @@
+Suppliers module - create an indepth cursor implementation plan and store it under /.cursor/plans/Suppliers_implementation.md
+Information to capture
+- id (uuid) ,primary key
+- contact_person_name ; required
+- company_name ; required
+- phone ; required
+- email ; required
+- address ; required
+- category (OEM/Aftermarket/Other) ; required
+- created_at
+- updated_at
+with soft deletes
+
+create a full crud with model, controller, migration, routes, requests, validation etc
+- follow the same ui aesthetic for the front end as the rest of the application. Keep it modern.
+- store all the supplier-related pages files under /resources/js/pages/suppliers.
+- the following are the supplier-related pages that i expect;
+	- index.tsx - has the datatable listing of the suppliers.
+	- view.tsx - has full details of the supplier.
+	- create_edit.tsx - a shared page that allows creation and editing of a given supplier.
+	
+- the index should have a datatable listing complete with pagination and search feature similar to the one under /resources/js/pages/customers/index.tsx. It should have the contact person name, company name, phone, email and category as the columns.Each row should have a view, update and delete button (use icons)
+- The view button should open a new page (stored as a separate file from index) which will list the full details of the supplier with a back button at the top.
+- The delete button should give an 'are you sure' prompt before soft deleting the given row.

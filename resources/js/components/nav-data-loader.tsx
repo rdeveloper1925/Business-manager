@@ -1,5 +1,9 @@
 import { Link } from '@inertiajs/react';
-import { ChevronRight, Database, Users } from 'lucide-react';
+import {
+    customersPage,
+    suppliersPage,
+} from '@/actions/App/Http/Controllers/DataLoaderController';
+import { ChevronRight, Database, Truck, Users } from 'lucide-react';
 
 import {
     Collapsible,
@@ -17,12 +21,13 @@ import {
     SidebarMenuSubItem,
 } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/hooks/use-current-url';
-import { customersPage } from '@/actions/App/Http/Controllers/DataLoaderController';
 
 export function NavDataLoader() {
     const { isCurrentUrl, isCurrentOrParentUrl } = useCurrentUrl();
     const customersHref = customersPage.url();
-    const childActive = isCurrentUrl(customersHref);
+    const suppliersHref = suppliersPage.url();
+    const sectionOpen =
+        isCurrentOrParentUrl(customersHref) || isCurrentOrParentUrl(suppliersHref);
 
     return (
         <SidebarGroup className="px-2 py-0">
@@ -31,7 +36,7 @@ export function NavDataLoader() {
                 <SidebarMenuItem>
                     <Collapsible
                         className="group/collapsible w-full"
-                        defaultOpen={isCurrentOrParentUrl(customersHref)}
+                        defaultOpen={sectionOpen}
                     >
                         <CollapsibleTrigger asChild>
                             <SidebarMenuButton tooltip="Data loader">
@@ -45,11 +50,22 @@ export function NavDataLoader() {
                                 <SidebarMenuSubItem>
                                     <SidebarMenuSubButton
                                         asChild
-                                        isActive={childActive}
+                                        isActive={isCurrentUrl(customersHref)}
                                     >
                                         <Link href={customersHref} prefetch>
                                             <Users />
                                             <span>Customer data load</span>
+                                        </Link>
+                                    </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                                <SidebarMenuSubItem>
+                                    <SidebarMenuSubButton
+                                        asChild
+                                        isActive={isCurrentUrl(suppliersHref)}
+                                    >
+                                        <Link href={suppliersHref} prefetch>
+                                            <Truck />
+                                            <span>Supplier data load</span>
                                         </Link>
                                     </SidebarMenuSubButton>
                                 </SidebarMenuSubItem>

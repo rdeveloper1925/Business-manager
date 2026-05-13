@@ -18,6 +18,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     apt-get update && apt-get install -y --no-install-recommends \
     curl \
     unzip \
+    $PHPIZE_DEPS \
     libonig-dev \
     libssl-dev \
     libxml2-dev \
@@ -25,6 +26,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     libicu-dev \
     libzip-dev \
     libpq-dev \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
     && docker-php-ext-install -j"$(nproc)" \
     pdo_pgsql \
     pgsql \
@@ -79,8 +82,9 @@ WORKDIR /var/www
 
 COPY package.json package-lock.json ./
 
+# `package.json` `prepare` runs `php artisan wayfinder:generate`, but `artisan` is not copied until the next step.
 RUN --mount=type=cache,target=/root/.npm,sharing=locked \
-    npm ci --no-progress
+    npm ci --no-progress --ignore-scripts
 
 COPY . /var/www
 
@@ -127,6 +131,7 @@ COPY --from=builder /usr/local/bin/docker-php-ext-* /usr/local/bin/
 
 # Use production php.ini defaults (opcache, error display, etc.).
 RUN mv "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini"
+COPY ./docker/php.production.ini /usr/local/etc/php/conf.d/zz-production.ini
 
 # Application code from builder (vendor, app, resources, public without fresh build dir yet).
 COPY --from=builder /var/www /var/www
@@ -139,7 +144,7 @@ WORKDIR /var/www
 # Apache workers run as www-data; align tree ownership for writable storage/bootstrap/cache.
 RUN chown -R www-data:www-data /var/www
 
-# Always run entrypoint first (migrations, config:cache, route:cache), then process from CMD.
+# Always run entrypoint first (migrations, optimize, storage link), then process from CMD.
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # Local Compose maps APP_PORT:80; Railway injects PORT — entrypoint retargets Apache to PORT.

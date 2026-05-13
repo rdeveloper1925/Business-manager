@@ -44,6 +44,8 @@ This project has domain-specific skills available. You MUST activate the relevan
 - You must follow all existing code conventions used in this application. When creating or editing a file, check sibling files for the correct structure, approach, and naming.
 - Use descriptive names for variables and methods. For example, `isRegisteredForDiscounts`, not `discount()`.
 - Check for existing components to reuse before writing a new one.
+- Use npm as the only package manager for this repository.
+- Wayfinder emits `resources/js/actions`, `resources/js/routes`, and `resources/js/wayfinder` (gitignored). The `prepare` script runs `php artisan wayfinder:generate --with-form` after `npm install` / `npm ci` when `artisan` exists (Composer must be installed first—CI orders PHP deps before Node). The Docker `assets` stage runs `npm ci --ignore-scripts` until the full tree is copied; `vite build` then generates Wayfinder output. Regenerate manually after route changes if files are stale.
 
 ## Verification Scripts
 

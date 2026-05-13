@@ -85,12 +85,12 @@ printf '\n\033[1;7m=============================================================
 printf '\033[1;7m  >>>  MIGRATIONS FINISHED SUCCESSFULLY  <<<\033[0m\n'
 printf '\033[1;7m================================================================\033[0m\n\n'
 
-# Clear and cache configurations
+# Clear and cache optimized artifacts
 # -----------------------------------------------------------
-# Improves performance by caching config and routes.
+# Improves performance by caching config, routes, events, and views.
 # -----------------------------------------------------------
-run_as_www_data "php artisan config:cache"
-run_as_www_data "php artisan route:cache"
+run_as_www_data "php artisan optimize"
+run_as_www_data "php artisan storage:link --force"
 
 # Last pass before Apache: any root-owned files or tight umasks from prior boots.
 fix_app_writables

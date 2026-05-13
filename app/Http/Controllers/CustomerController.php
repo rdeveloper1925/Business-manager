@@ -4,10 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\CustomerRequests\StoreCustomerRequest;
 use App\Http\Requests\CustomerRequests\UpdateCustomerRequest;
+use App\Http\Requests\Customers\IndexCustomersRequest;
 use App\Models\Customer;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -16,23 +15,25 @@ class CustomerController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index(Request $request): Response
+    public function index(IndexCustomersRequest $request): Response
     {
         $this->authorize('viewAny', Customer::class);
 
-        $validated = $request->validate([
-            'search' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'sort' => ['sometimes', 'string', Rule::in(['full_name', 'phone_number', 'email'])],
-            'direction' => ['sometimes', 'string', Rule::in(['asc', 'desc'])],
-            'view' => ['sometimes', 'nullable', 'integer', 'min:1'],
-            'edit' => ['sometimes', 'nullable', 'integer', 'min:1'],
-        ]);
+        $validated = $request->validated();
 
         $search = isset($validated['search']) ? trim((string) $validated['search']) : '';
         $sort = $validated['sort'] ?? 'full_name';
         $direction = ($validated['direction'] ?? 'asc') === 'desc' ? 'desc' : 'asc';
 
         $query = Customer::query();
+        $query->select([
+            'customer_id',
+            'full_name',
+            'email',
+            'phone_number',
+            'phone_country_name',
+            'created_at',
+        ]);
 
         if ($search !== '') {
             $like = '%'.addcslashes($search, '%_\\').'%';
@@ -45,14 +46,7 @@ class CustomerController extends Controller
 
         $query->orderBy($sort, $direction);
 
-        $profileCustomer = null;
-        if ($request->filled('view')) {
-            $candidate = Customer::query()->whereKey((int) $request->input('view'))->first();
-            if ($candidate !== null) {
-                $this->authorize('view', $candidate);
-                $profileCustomer = $candidate;
-            }
-        }
+        $profileCustomerId = isset($validated['view']) ? (int) $validated['view'] : null;
 
         $editCustomer = null;
         if ($request->filled('edit')) {
@@ -63,6 +57,8 @@ class CustomerController extends Controller
             }
         }
 
+        $profileCustomerProp = $this->profileCustomerProp($profileCustomerId);
+
         return Inertia::render('customers/index', [
             'customers' => $query->paginate(10)->withQueryString(),
             'filters' => [
@@ -70,9 +66,43 @@ class CustomerController extends Controller
                 'sort' => $sort,
                 'direction' => $direction,
             ],
-            'profileCustomer' => $profileCustomer,
+            'profileCustomer' => $profileCustomerProp,
             'editCustomer' => $editCustomer,
         ]);
+    }
+
+    /**
+     * In production, deferred so heavy profile fields are omitted from the first Inertia payload.
+     */
+    private function profileCustomerProp(?int $profileCustomerId): mixed
+    {
+        if ($profileCustomerId === null) {
+            return null;
+        }
+
+        $load = fn (): ?Customer => $this->loadProfileCustomer($profileCustomerId);
+
+        return app()->environment('testing') ? $load() : Inertia::defer($load);
+    }
+
+    private function loadProfileCustomer(int $profileCustomerId): ?Customer
+    {
+        $customer = Customer::query()->whereKey($profileCustomerId)->first([
+            'customer_id',
+            'full_name',
+            'organization_name',
+            'phone_country_name',
+            'phone_number',
+            'email',
+            'address',
+            'tax_id',
+        ]);
+
+        if ($customer !== null) {
+            $this->authorize('view', $customer);
+        }
+
+        return $customer;
     }
 
     /**
