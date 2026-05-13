@@ -6,6 +6,7 @@ use App\Broadcasting\DataImportProgressNotifier;
 use App\Models\Supplier;
 use App\Services\DataLoad\SupplierLoadService;
 use App\Support\DataImportCache;
+use App\Support\DataImportFailureMessage;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
@@ -97,7 +98,7 @@ class LoadSuppliersFromCsvJob implements ShouldQueue
             $message = collect($e->errors())->flatten()->first() ?? __('Validation failed.');
             $this->markFailed($message);
         } catch (\Throwable $e) {
-            $this->markFailed(__('Import failed. Please try again.'));
+            $this->markFailed(DataImportFailureMessage::fromThrowable($e));
         } finally {
             if (is_file($this->absolutePath)) {
                 @unlink($this->absolutePath);

@@ -170,7 +170,7 @@ class SupplierTest extends TestCase
         $supplier->refresh();
         $this->assertSame('Pat Updated', $supplier->contact_person_name);
         $this->assertSame('2 Oak Ave', $supplier->address);
-        $this->assertSame(SupplierCategory::Aftermarket, $supplier->category);
+        $this->assertSame(SupplierCategory::Aftermarket->value, $supplier->category);
 
         $this->actingAs($user)
             ->delete(route('suppliers.destroy', $supplier))

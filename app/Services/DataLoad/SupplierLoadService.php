@@ -98,6 +98,12 @@ class SupplierLoadService
      */
     public static function validateRowData(array &$data, int $lineNumber): void
     {
+        foreach (['contact_person_name', 'company_name', 'phone', 'email', 'address', 'category'] as $key) {
+            if (isset($data[$key]) && is_string($data[$key])) {
+                $data[$key] = trim($data[$key]);
+            }
+        }
+
         $validator = Validator::make($data, [
             'contact_person_name' => ['required', 'string', 'max:255'],
             'company_name' => ['required', 'string', 'max:255'],

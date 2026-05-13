@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Enums\SupplierCategory;
 use Database\Factories\SupplierFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -24,14 +23,4 @@ class Supplier extends Model
         'address',
         'category',
     ];
-
-    /**
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return [
-            'category' => SupplierCategory::class,
-        ];
-    }
 }
