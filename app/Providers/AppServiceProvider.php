@@ -66,7 +66,7 @@ class AppServiceProvider extends ServiceProvider
                     'sqlite' => $sqlite,
                     'pgsql' => $pgsql,
                 ],
-                'database.default' => env('DB_CONNECTION', 'pgsql'),
+                'database.default' => config('database.default'),
             ]);
 
             return;
@@ -74,7 +74,7 @@ class AppServiceProvider extends ServiceProvider
 
         config([
             'database.connections' => ['pgsql' => $pgsql],
-            // Only `pgsql` exists here; align default (avoids local boot before tests when .env still says mysql).
+            // Production runs against pgsql only; sqlite is reserved for tests.
             'database.default' => 'pgsql',
         ]);
     }

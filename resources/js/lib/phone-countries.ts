@@ -7,6 +7,9 @@ export type PhoneCountry = {
 };
 
 export const PHONE_COUNTRIES: PhoneCountry[] = raw;
+const PHONE_COUNTRY_BY_NAME = new Map(
+    PHONE_COUNTRIES.map((country) => [country.name, country] as const),
+);
 
 export function countryUsesNanpMask(dialCode: string): boolean {
     return dialCode === '+1';
@@ -30,8 +33,8 @@ export function flagEmojiFromIso2(iso2: string): string {
 
 export function findPhoneCountryByName(
     name: string,
-): PhoneCountry | undefined {
-    return PHONE_COUNTRIES.find((c) => c.name === name);
+): PhoneCountry | null {
+    return PHONE_COUNTRY_BY_NAME.get(name) ?? null;
 }
 
 export function formatNanpDisplay(digits: string): string {

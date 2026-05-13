@@ -21,3 +21,10 @@ yarn-error.log
 /.vscode
 **/node_modules
 **/.git
+tests/
+phpunit.xml
+phpunit.xml.dist
+.github/
+coverage/
+*.md
+node_modules.cache/

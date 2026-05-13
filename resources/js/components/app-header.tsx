@@ -82,6 +82,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                             <Link
                                                 key={item.title}
                                                 href={item.href}
+                                                prefetch="hover"
                                                 className="flex items-center space-x-2 font-medium"
                                             >
                                                 {item.icon && (
@@ -115,6 +116,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                     >
                                         <Link
                                             href={item.href}
+                                            prefetch="hover"
                                             className={cn(
                                                 navigationMenuTriggerStyle(),
                                                 whenCurrentUrl(

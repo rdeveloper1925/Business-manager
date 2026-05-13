@@ -88,23 +88,6 @@ class PhoneCountry
         return self::defaultName();
     }
 
-    public static function usesNanpMask(?string $countryName): bool
-    {
-        $row = self::findByName($countryName);
-
-        return $row !== null && $row['dialCode'] === '+1';
-    }
-
-    public static function dialDigits(?string $countryName): string
-    {
-        $row = self::findByName($countryName);
-        if ($row === null) {
-            return '';
-        }
-
-        return preg_replace('/\D+/', '', $row['dialCode']) ?? '';
-    }
-
     /**
      * Validation rules for a free-form phone label (any text the user or import provides).
      *

@@ -3,8 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Broadcasting\DataImportProgressNotifier;
+use App\Http\Requests\DataLoad\UploadCustomersRequest;
+use App\Http\Requests\DataLoad\UploadSuppliersRequest;
 use App\Models\Customer;
+use App\Models\Supplier;
 use App\Services\DataLoad\CustomerLoadService;
+use App\Services\DataLoad\SupplierLoadService;
 use App\Support\DataImportCache;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,6 +23,7 @@ class DataLoaderController extends Controller
 {
     public function __construct(
         private CustomerLoadService $customerLoadService,
+        private SupplierLoadService $supplierLoadService,
     ) {}
 
     /**
@@ -38,13 +43,9 @@ class DataLoaderController extends Controller
         return $this->customerLoadService->generateDataStructureTemplate();
     }
 
-    public function customersUpload(Request $request): JsonResponse
+    public function customersUpload(UploadCustomersRequest $request): JsonResponse
     {
         $this->authorize('create', Customer::class);
-
-        $request->validate([
-            'file' => ['required', 'file', 'mimes:csv,txt', 'max:10240'],
-        ]);
 
         $user = $request->user();
         if ($user === null) {
@@ -75,6 +76,56 @@ class DataLoaderController extends Controller
         return response()->json(['import_id' => $importId]);
     }
 
+    /**
+     * Inertia page: supplier CSV import UI.
+     */
+    public function suppliersPage(): Response
+    {
+        $this->authorize('create', Supplier::class);
+
+        return Inertia::render('data-load/suppliers');
+    }
+
+    public function suppliersTemplate(): StreamedResponse
+    {
+        $this->authorize('create', Supplier::class);
+
+        return $this->supplierLoadService->generateDataStructureTemplate();
+    }
+
+    public function suppliersUpload(UploadSuppliersRequest $request): JsonResponse
+    {
+        $this->authorize('create', Supplier::class);
+
+        $user = $request->user();
+        if ($user === null) {
+            abort(403);
+        }
+
+        $importId = (string) Str::uuid();
+        $relativePath = $request->file('file')->storeAs('tmp/imports', $importId.'.csv', 'local');
+        $absolutePath = Storage::disk('local')->path($relativePath);
+
+        DataImportProgressNotifier::notify($user->id, $importId, [
+            'user_id' => $user->id,
+            'status' => 'pending',
+            'progress' => 0,
+            'processed' => 0,
+            'total' => 0,
+            'rows_loaded' => 0,
+            'message' => null,
+        ]);
+
+        try {
+            $this->supplierLoadService->startImport($absolutePath, $importId, $user->id);
+        } catch (ValidationException $e) {
+            Storage::disk('local')->delete($relativePath);
+            throw $e;
+        }
+
+        return response()->json(['import_id' => $importId]);
+    }
+
     public function status(Request $request, string $importId): JsonResponse
     {
         $user = $request->user();
@@ -83,7 +134,7 @@ class DataLoaderController extends Controller
         }
 
         $data = DataImportCache::get($user->id, $importId);
-        if ($data === null || (int) ($data['user_id'] ?? 0) !== $user->id) {
+        if ($data === null || (string) ($data['user_id'] ?? '') !== (string) $user->id) {
             abort(403);
         }
 

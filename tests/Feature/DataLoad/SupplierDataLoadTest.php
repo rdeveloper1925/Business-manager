@@ -1,0 +1,217 @@
+<?php
+
+namespace Tests\Feature\DataLoad;
+
+use App\Enums\SupplierCategory;
+use App\Events\DataLoad\DataImportProgressUpdated;
+use App\Jobs\LoadSuppliersFromCsvJob;
+use App\Models\Supplier;
+use App\Models\User;
+use App\Services\DataLoad\SupplierLoadService;
+use App\Support\DataImportCache;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Inertia\Testing\AssertableInertia as Assert;
+use Tests\TestCase;
+
+class SupplierDataLoadTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_guests_cannot_download_supplier_csv_template(): void
+    {
+        $this->get(route('data-load.suppliers.template'))
+            ->assertRedirect();
+    }
+
+    public function test_authenticated_user_can_download_supplier_csv_template(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->get(route('data-load.suppliers.template'));
+
+        $response->assertOk();
+        $response->assertHeaderContains('content-type', 'text/csv');
+
+        $body = trim((string) $response->streamedContent());
+        $firstLine = explode("\n", $body, 2)[0];
+        $this->assertSame(
+            implode(',', SupplierLoadService::expectedHeaders()),
+            $firstLine,
+        );
+    }
+
+    public function test_upload_rejects_invalid_headers_and_removes_temp_file(): void
+    {
+        Queue::fake();
+
+        $user = User::factory()->create();
+        Storage::disk('local')->deleteDirectory('tmp/imports');
+        Storage::disk('local')->makeDirectory('tmp/imports');
+
+        $csv = "wrong,headers\na,b";
+        $file = UploadedFile::fake()->createWithContent('bad.csv', $csv);
+
+        $this->actingAs($user)
+            ->postJson(route('data-load.suppliers.upload'), [
+                'file' => $file,
+            ])
+            ->assertUnprocessable();
+
+        Queue::assertNotPushed(LoadSuppliersFromCsvJob::class);
+        $this->assertSame(
+            [],
+            Storage::disk('local')->files('tmp/imports'),
+        );
+    }
+
+    public function test_valid_upload_dispatches_import_job(): void
+    {
+        Queue::fake();
+        Event::fake([DataImportProgressUpdated::class]);
+
+        $user = User::factory()->create();
+
+        $headers = implode(',', SupplierLoadService::expectedHeaders());
+        $csv = $headers."\nJane Doe,Acme Inc,+15555550100,jane@example.com,123 Main St,OEM";
+        $file = UploadedFile::fake()->createWithContent('good.csv', $csv);
+
+        $response = $this->actingAs($user)
+            ->postJson(route('data-load.suppliers.upload'), [
+                'file' => $file,
+            ]);
+
+        $response->assertOk()
+            ->assertJsonStructure(['import_id']);
+
+        Queue::assertPushed(LoadSuppliersFromCsvJob::class, function (LoadSuppliersFromCsvJob $job) use ($response): bool {
+            return $job->importId === $response->json('import_id');
+        });
+
+        Event::assertDispatched(DataImportProgressUpdated::class, function (DataImportProgressUpdated $e) use ($response): bool {
+            return $e->importId === $response->json('import_id')
+                && $e->state['status'] === 'pending';
+        });
+
+        $importId = $response->json('import_id');
+        Storage::disk('local')->delete('tmp/imports/'.$importId.'.csv');
+    }
+
+    public function test_sync_import_inserts_suppliers_and_deletes_temp_file(): void
+    {
+        $user = User::factory()->create();
+
+        $headers = implode(',', SupplierLoadService::expectedHeaders());
+        $csv = $headers."\nJane Doe,Acme Inc,+15555550100,jane@example.com,123 Main St,OEM";
+        $file = UploadedFile::fake()->createWithContent('good.csv', $csv);
+
+        $response = $this->actingAs($user)
+            ->postJson(route('data-load.suppliers.upload'), [
+                'file' => $file,
+            ]);
+
+        $response->assertOk();
+        $importId = $response->json('import_id');
+
+        $this->assertDatabaseHas('suppliers', [
+            'email' => 'jane@example.com',
+            'contact_person_name' => 'Jane Doe',
+            'company_name' => 'Acme Inc',
+            'category' => SupplierCategory::Oem->value,
+        ]);
+
+        $this->assertFalse(
+            Storage::disk('local')->exists('tmp/imports/'.$importId.'.csv'),
+        );
+    }
+
+    public function test_sync_import_upserts_by_email(): void
+    {
+        $user = User::factory()->create();
+
+        $headers = implode(',', SupplierLoadService::expectedHeaders());
+        $csv1 = $headers."\nJane Doe,Acme Inc,+15555550100,jane@example.com,123 Main St,OEM";
+        $this->actingAs($user)
+            ->postJson(route('data-load.suppliers.upload'), [
+                'file' => UploadedFile::fake()->createWithContent('first.csv', $csv1),
+            ])
+            ->assertOk();
+
+        $csv2 = $headers."\nJanet Doe,NewCo,+15555550199,jane@example.com,456 Oak Ave,Aftermarket";
+        $this->actingAs($user)
+            ->postJson(route('data-load.suppliers.upload'), [
+                'file' => UploadedFile::fake()->createWithContent('second.csv', $csv2),
+            ])
+            ->assertOk();
+
+        $this->assertDatabaseHas('suppliers', [
+            'email' => 'jane@example.com',
+            'contact_person_name' => 'Janet Doe',
+            'company_name' => 'NewCo',
+            'category' => SupplierCategory::Aftermarket->value,
+        ]);
+
+        $this->assertSame(1, Supplier::query()->where('email', 'jane@example.com')->count());
+    }
+
+    public function test_sync_import_duplicate_emails_in_one_file_last_row_wins(): void
+    {
+        $user = User::factory()->create();
+
+        $headers = implode(',', SupplierLoadService::expectedHeaders());
+        $csv = $headers."\n"
+            ."First Person,Co A,+15555550100,dup@example.com,1 St,OEM\n"
+            .'Second Person,Co B,+15555550101,dup@example.com,2 Ave,Other';
+        $this->actingAs($user)
+            ->postJson(route('data-load.suppliers.upload'), [
+                'file' => UploadedFile::fake()->createWithContent('dup.csv', $csv),
+            ])
+            ->assertOk();
+
+        $this->assertDatabaseHas('suppliers', [
+            'email' => 'dup@example.com',
+            'contact_person_name' => 'Second Person',
+            'company_name' => 'Co B',
+            'category' => SupplierCategory::Other->value,
+        ]);
+
+        $this->assertSame(1, Supplier::query()->where('email', 'dup@example.com')->count());
+    }
+
+    public function test_status_returns_forbidden_for_another_users_import(): void
+    {
+        $userA = User::factory()->create();
+        $userB = User::factory()->create();
+        $importId = (string) Str::uuid();
+
+        DataImportCache::put($userA->id, $importId, [
+            'user_id' => $userA->id,
+            'status' => 'pending',
+            'progress' => 0,
+            'processed' => 0,
+            'total' => 0,
+            'rows_loaded' => 0,
+            'message' => null,
+        ]);
+
+        $this->actingAs($userB)
+            ->getJson(route('data-load.status', ['importId' => $importId]))
+            ->assertForbidden();
+    }
+
+    public function test_suppliers_data_load_page_renders_inertia(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('data-load.suppliers'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('data-load/suppliers'));
+    }
+}

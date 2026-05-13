@@ -18,11 +18,6 @@ class CustomerLoadService
         return ['full_name', 'organization_name', 'phone_country_name', 'phone_number', 'email', 'address', 'tax_id'];
     }
 
-    public function loaderKey(): string
-    {
-        return 'customers';
-    }
-
     public function generateDataStructureTemplate(): StreamedResponse
     {
         $headers = self::expectedHeaders();
@@ -40,7 +35,7 @@ class CustomerLoadService
         ]);
     }
 
-    public function startImport(string $absolutePath, string $importId, int $userId): void
+    public function startImport(string $absolutePath, string $importId, int|string $userId): void
     {
         $this->assertHeaderRowMatches($absolutePath);
 

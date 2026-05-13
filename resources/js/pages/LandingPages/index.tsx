@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import { contact as landingContact, demo as landingDemo, overview as landingOverview } from '@/routes/landing';
 import LandingLayout from './_layout';
 
 const corePillars = [
@@ -75,13 +76,15 @@ export default function LandingPage() {
                         </p>
                         <div className="mt-8 flex flex-wrap items-center gap-4">
                             <Link
-                                href="/demo"
+                                href={landingDemo.url()}
+                                prefetch="hover"
                                 className="landing-btn-primary rounded-md px-5 py-3 text-sm font-semibold transition"
                             >
                                 Request a Demo
                             </Link>
                             <Link
-                                href="/overview"
+                                href={landingOverview.url()}
+                                prefetch="hover"
                                 className="landing-btn-secondary rounded-md border px-5 py-3 text-sm font-semibold transition"
                             >
                                 Explore Product
@@ -168,13 +171,15 @@ export default function LandingPage() {
                     </div>
                     <div className="flex flex-wrap gap-4">
                         <Link
-                            href="/demo"
+                            href={landingDemo.url()}
+                            prefetch="hover"
                             className="landing-btn-accent rounded-md px-5 py-3 text-sm font-semibold transition"
                         >
                             Schedule Demo
                         </Link>
                         <Link
-                            href="/contact"
+                            href={landingContact.url()}
+                            prefetch="hover"
                             className="landing-btn-secondary rounded-md border px-5 py-3 text-sm font-semibold transition"
                         >
                             Contact Team
