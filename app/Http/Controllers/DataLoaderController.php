@@ -80,7 +80,7 @@ class DataLoaderController extends Controller
         }
 
         $data = DataImportCache::get($user->id, $importId);
-        if ($data === null || (int) ($data['user_id'] ?? 0) !== $user->id) {
+        if ($data === null || (string) ($data['user_id'] ?? '') !== (string) $user->id) {
             abort(403);
         }
 

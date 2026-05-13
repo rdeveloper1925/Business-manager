@@ -35,7 +35,7 @@ class CustomerLoadService
         ]);
     }
 
-    public function startImport(string $absolutePath, string $importId, int $userId): void
+    public function startImport(string $absolutePath, string $importId, int|string $userId): void
     {
         $this->assertHeaderRowMatches($absolutePath);
 

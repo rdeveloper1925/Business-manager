@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DataLoaderController;
+use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'LandingPages/index')->name('home');
@@ -12,6 +13,7 @@ Route::inertia('/demo', 'LandingPages/demo')->name('landing.demo');
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
     Route::resource('customers', CustomerController::class)->except(['create', 'edit']);
+    Route::resource('suppliers', SupplierController::class);
 
     Route::get('data-load/customers', [DataLoaderController::class, 'customersPage'])->name('data-load.customers');
     Route::get('data-load/customers/template', [DataLoaderController::class, 'customersTemplate'])->name('data-load.customers.template');

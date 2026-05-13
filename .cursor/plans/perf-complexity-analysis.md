@@ -106,33 +106,15 @@ flowchart TD
 
 ---
 
-### T1.5 — Add indexes on `customers` search/sort columns
+### T1.5 — Indexes on `customers` search/sort columns *(implemented)*
 
-- **Problem:** [app/Http/Controllers/CustomerController.php](app/Http/Controllers/CustomerController.php) lines 38–46 search and sort by `full_name`, `phone_number`, `email`. The migration at [database/migrations/2026_04_09_220754_create_customers_table.php](database/migrations/2026_04_09_220754_create_customers_table.php) lines 16–21 declares no indexes — every list request becomes a sequential scan once the table grows.
-- **Implementation steps:**
-  1. Create a new migration `add_indexes_to_customers_table.php`:
-     ```php
-     Schema::table('customers', function (Blueprint $table) {
-         $table->unique('email');
-         $table->index('full_name');
-         $table->index('phone_number');
-         $table->index('created_at');
-     });
-     ```
-  2. For substring search (`%term%`) on Postgres, add a second migration that enables `pg_trgm` and creates GIN indexes:
-     ```php
-     DB::statement('CREATE EXTENSION IF NOT EXISTS pg_trgm');
-     DB::statement('CREATE INDEX customers_full_name_trgm_idx ON customers USING gin (full_name gin_trgm_ops)');
-     DB::statement('CREATE INDEX customers_email_trgm_idx ON customers USING gin (email gin_trgm_ops)');
-     ```
-     Wrap these in `if (DB::connection()->getDriverName() === 'pgsql')` so SQLite tests still pass.
-  3. In `down()`, drop the indexes and extension in reverse order.
-- **Acceptance criteria:**
-  - `EXPLAIN ANALYZE` on the customer list query shows `Index Scan` (not `Seq Scan`) for sorted/filtered queries.
-  - Trigram search query plan uses `Bitmap Index Scan` on the GIN index.
+- **Context:** [app/Http/Controllers/CustomerController.php](app/Http/Controllers/CustomerController.php) lines 38–46 search and sort by `full_name`, `phone_number`, `email`. B-tree indexes and PostgreSQL trigram GIN indexes are defined in [database/migrations/2026_04_09_220754_create_customers_table.php](database/migrations/2026_04_09_220754_create_customers_table.php) (`$table->unique('email')`, `index()` on `full_name`, `phone_number`, `created_at`; after `Schema::create`, a `pgsql`-only block runs `CREATE EXTENSION IF NOT EXISTS pg_trgm` and the `customers_*_trgm_idx` GIN indexes). No separate alter migrations.
+- **Verification (still worth running):**
+  1. `EXPLAIN ANALYZE` on the customer list query shows `Index Scan` (not `Seq Scan`) for sorted/filtered queries at scale.
+  2. Trigram-style search query plan uses `Bitmap Index Scan` on the GIN index where applicable.
 - **Risks / dependencies:**
-  - `pg_trgm` requires the DB role to have permission to create extensions; if not, run the `CREATE EXTENSION` once manually as a superuser and skip that statement.
-  - Unique-on-email migration will fail if duplicates exist. Pre-clean duplicates first.
+  - `pg_trgm` requires the DB role to have permission to create extensions; if not, run `CREATE EXTENSION pg_trgm` once manually as a superuser.
+  - The unique `email` constraint will fail on migrate if duplicates exist. Pre-clean duplicates before `migrate` on dirty data.
 
 ---
 

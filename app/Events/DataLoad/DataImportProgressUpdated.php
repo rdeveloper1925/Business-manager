@@ -16,10 +16,10 @@ class DataImportProgressUpdated implements ShouldBroadcast, ShouldRescue
     public string $broadcastQueue = 'broadcasts';
 
     /**
-     * @param  array{user_id: int, status: string, progress: int, processed: int, total: int, rows_loaded: int, message: string|null}  $state
+     * @param  array{user_id: int|string, status: string, progress: int, processed: int, total: int, rows_loaded: int, message: string|null}  $state
      */
     public function __construct(
-        public int $userId,
+        public int|string $userId,
         public string $importId,
         public array $state,
     ) {}

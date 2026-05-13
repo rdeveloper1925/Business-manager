@@ -32,7 +32,7 @@ class LoadCustomersFromCsvJob implements ShouldQueue
     public function __construct(
         public string $importId,
         public string $absolutePath,
-        public int $userId,
+        public int|string $userId,
     ) {}
 
     public function handle(): void
