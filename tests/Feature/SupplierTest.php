@@ -13,7 +13,7 @@ class SupplierTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_it_persists_a_supplier_with_uuid_primary_key(): void
+    public function test_it_persists_a_supplier_with_auto_increment_primary_key(): void
     {
         $supplier = Supplier::factory()->create([
             'contact_person_name' => 'Jane Doe',
@@ -30,7 +30,7 @@ class SupplierTest extends TestCase
         ]);
 
         $this->assertSame('id', $supplier->getKeyName());
-        $this->assertIsString($supplier->id);
+        $this->assertIsInt($supplier->id);
     }
 
     public function test_guests_are_redirected_from_suppliers_routes(): void

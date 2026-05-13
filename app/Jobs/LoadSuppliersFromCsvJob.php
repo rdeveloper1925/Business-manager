@@ -9,7 +9,6 @@ use App\Support\DataImportCache;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class LoadSuppliersFromCsvJob implements ShouldQueue
@@ -187,7 +186,6 @@ class LoadSuppliersFromCsvJob implements ShouldQueue
                     : (string) $categoryRaw;
 
                 $buffer[] = [
-                    'id' => (string) Str::uuid(),
                     'contact_person_name' => (string) $assoc['contact_person_name'],
                     'company_name' => (string) $assoc['company_name'],
                     'phone' => (string) $assoc['phone'],
@@ -230,7 +228,6 @@ class LoadSuppliersFromCsvJob implements ShouldQueue
         $payload = [];
         foreach ($rows as $row) {
             $payload[] = [
-                'id' => $row['id'],
                 'contact_person_name' => $row['contact_person_name'],
                 'company_name' => $row['company_name'],
                 'phone' => $row['phone'],

@@ -1,7 +1,7 @@
 export type SupplierCategoryValue = 'OEM' | 'Aftermarket' | 'Other';
 
 export type SupplierSummary = {
-    id: string;
+    id: number;
     contact_person_name: string;
     company_name: string;
     phone: string;
