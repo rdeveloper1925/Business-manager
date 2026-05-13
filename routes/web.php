@@ -18,6 +18,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('data-load/customers', [DataLoaderController::class, 'customersPage'])->name('data-load.customers');
     Route::get('data-load/customers/template', [DataLoaderController::class, 'customersTemplate'])->name('data-load.customers.template');
     Route::post('data-load/customers', [DataLoaderController::class, 'customersUpload'])->name('data-load.customers.upload');
+    Route::get('data-load/suppliers', [DataLoaderController::class, 'suppliersPage'])->name('data-load.suppliers');
+    Route::get('data-load/suppliers/template', [DataLoaderController::class, 'suppliersTemplate'])->name('data-load.suppliers.template');
+    Route::post('data-load/suppliers', [DataLoaderController::class, 'suppliersUpload'])->name('data-load.suppliers.upload');
     Route::get('data-load/status/{importId}', [DataLoaderController::class, 'status'])->name('data-load.status');
 });
 

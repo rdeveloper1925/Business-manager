@@ -1,8 +1,8 @@
-import { useForm } from '@inertiajs/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { customersUpload, status as statusRoute } from '@/actions/App/Http/Controllers/DataLoaderController';
+import { status as statusRoute } from '@/actions/App/Http/Controllers/DataLoaderController';
 import { getEcho } from '@/echo';
+import { xsrfToken } from '@/lib/csrf';
 
 export type ImportStatusResponse = {
     import_id?: string;
@@ -14,8 +14,12 @@ export type ImportStatusResponse = {
     message: string | null;
 };
 
+export type UseCsvImportOptions = {
+    uploadUrl: string;
+    sessionStorageKey: string;
+};
+
 const PROGRESS_EVENT = '.data-import.progress';
-const CUSTOMER_IMPORT_SESSION_KEY = 'bm_customer_data_import_id';
 
 function parseErrorMessage(data: Record<string, unknown>): string {
     if (typeof data.message === 'string' && data.message !== '') {
@@ -25,75 +29,79 @@ function parseErrorMessage(data: Record<string, unknown>): string {
     const errors = data.errors;
 
     if (errors && typeof errors === 'object' && errors !== null) {
-        const first = Object.values(errors as Record<string, string[]>)[0];
+        const first = Object.values(errors as Record<string, string[] | string>)[0];
 
         if (Array.isArray(first) && typeof first[0] === 'string') {
             return first[0];
+        }
+
+        if (typeof first === 'string') {
+            return first;
         }
     }
 
     return 'Something went wrong.';
 }
 
-function persistActiveImportId(id: string): void {
-    try {
-        sessionStorage.setItem(CUSTOMER_IMPORT_SESSION_KEY, id);
-    } catch {
-        /* quota / private mode */
-    }
-}
+export function useCsvImport({
+    uploadUrl,
+    sessionStorageKey,
+}: UseCsvImportOptions) {
+    const [importId, setImportId] = useState<string | null>(() => {
+        try {
+            const value = sessionStorage.getItem(sessionStorageKey);
 
-function readActiveImportId(): string | null {
-    try {
-        const value = sessionStorage.getItem(CUSTOMER_IMPORT_SESSION_KEY);
-
-        return value !== null && value !== '' ? value : null;
-    } catch {
-        return null;
-    }
-}
-
-function clearActiveImportId(): void {
-    try {
-        sessionStorage.removeItem(CUSTOMER_IMPORT_SESSION_KEY);
-    } catch {
-        /* ignore */
-    }
-}
-
-function applyTerminalToasts(
-    data: ImportStatusResponse,
-    options?: { suppressToast?: boolean },
-): void {
-    const showToast = !options?.suppressToast;
-
-    if (data.status === 'success') {
-        clearActiveImportId();
-
-        if (showToast) {
-            toast.success(`Import finished. ${data.rows_loaded} row(s) loaded.`);
+            return value !== null && value !== '' ? value : null;
+        } catch {
+            return null;
         }
-    } else if (data.status === 'failed') {
-        clearActiveImportId();
-
-        if (showToast) {
-            toast.error(data.message ?? 'Import failed.');
-        }
-    }
-}
-
-export function useCsvImport() {
-    const [importId, setImportId] = useState<string | null>(() =>
-        readActiveImportId(),
-    );
+    });
     const [importStatus, setImportStatus] = useState<ImportStatusResponse | null>(
         null,
     );
     const terminalToastShownRef = useRef(false);
     const skipTerminalToastOnFirstHydrateRef = useRef(importId !== null);
-    const { setData, post, processing } = useForm<{ file: File | null }>({
-        file: null,
-    });
+    const [uploading, setUploading] = useState(false);
+
+    const clearStorage = useCallback(() => {
+        try {
+            sessionStorage.removeItem(sessionStorageKey);
+        } catch {
+            /* ignore */
+        }
+    }, [sessionStorageKey]);
+
+    const persistId = useCallback(
+        (id: string) => {
+            try {
+                sessionStorage.setItem(sessionStorageKey, id);
+            } catch {
+                /* quota / private mode */
+            }
+        },
+        [sessionStorageKey],
+    );
+
+    const applyTerminalToasts = useCallback(
+        (data: ImportStatusResponse, options?: { suppressToast?: boolean }): void => {
+            const showToast = !options?.suppressToast;
+
+            if (data.status === 'success') {
+                clearStorage();
+
+                if (showToast) {
+                    toast.success(`Import finished. ${data.rows_loaded} row(s) loaded.`);
+                }
+            } else if (data.status === 'failed') {
+                clearStorage();
+
+                if (showToast) {
+                    toast.error(data.message ?? 'Import failed.');
+                }
+            }
+        },
+        [clearStorage],
+    );
 
     const hydrateStatus = useCallback(
         async (
@@ -110,7 +118,7 @@ export function useCsvImport() {
             });
 
             if (response.status === 403 || response.status === 404) {
-                clearActiveImportId();
+                clearStorage();
                 setImportId(null);
                 setImportStatus(null);
 
@@ -136,7 +144,7 @@ export function useCsvImport() {
 
             return true;
         },
-        [],
+        [applyTerminalToasts, clearStorage],
     );
 
     useEffect(() => {
@@ -201,7 +209,7 @@ export function useCsvImport() {
                     terminalToastShownRef.current = true;
                     applyTerminalToasts(payload);
                 } else {
-                    clearActiveImportId();
+                    clearStorage();
                 }
             }
         });
@@ -216,55 +224,84 @@ export function useCsvImport() {
                 pollTimer = null;
             }
         };
-    }, [importId, hydrateStatus]);
+    }, [importId, hydrateStatus, applyTerminalToasts, clearStorage]);
 
     const submitFile = useCallback(
         (file: File, onDone: () => void) => {
             setImportStatus(null);
             setImportId(null);
-            clearActiveImportId();
+            clearStorage();
             terminalToastShownRef.current = false;
             skipTerminalToastOnFirstHydrateRef.current = false;
-            setData('file', file);
 
-            post(customersUpload.url(), {
-                forceFormData: true,
-                preserveScroll: true,
-                onSuccess: ({ props }) => {
-                    const importIdValue = props.import_id;
+            const body = new FormData();
+            body.append('file', file);
 
-                    if (typeof importIdValue !== 'string') {
-                        toast.error('Invalid response from server.');
+            setUploading(true);
+
+            void (async (): Promise<void> => {
+                try {
+                    const response = await fetch(uploadUrl, {
+                        method: 'POST',
+                        body,
+                        credentials: 'same-origin',
+                        headers: {
+                            Accept: 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-XSRF-TOKEN': xsrfToken(),
+                        },
+                    });
+
+                    let payload: Record<string, unknown> = {};
+
+                    try {
+                        payload = (await response.json()) as Record<string, unknown>;
+                    } catch {
+                        payload = {};
+                    }
+
+                    if (response.ok) {
+                        const importIdValue = payload.import_id;
+
+                        if (typeof importIdValue !== 'string') {
+                            toast.error('Invalid response from server.');
+                            onDone();
+
+                            return;
+                        }
+
+                        persistId(importIdValue);
+                        setImportId(importIdValue);
+                        toast.info('Import started.');
                         onDone();
 
                         return;
                     }
 
-                    persistActiveImportId(importIdValue);
-                    setImportId(importIdValue);
-                    toast.info('Import started.');
+                    if (response.status === 422) {
+                        toast.error(parseErrorMessage(payload));
+                        onDone();
+
+                        return;
+                    }
+
+                    toast.error(parseErrorMessage(payload));
                     onDone();
-                },
-                onError: (errors) => {
-                    const message =
-                        typeof errors.file === 'string'
-                            ? errors.file
-                            : parseErrorMessage(errors as Record<string, unknown>);
-                    toast.error(message);
+                } catch {
+                    toast.error('Network error.');
                     onDone();
-                },
-                onFinish: () => {
-                    setData('file', null);
-                },
-            });
+                } finally {
+                    setUploading(false);
+                }
+            })();
         },
-        [post, setData],
+        [uploadUrl, clearStorage, persistId],
     );
 
     return {
         importId,
         importStatus,
         submitFile,
-        uploading: processing,
+        uploading,
     };
 }

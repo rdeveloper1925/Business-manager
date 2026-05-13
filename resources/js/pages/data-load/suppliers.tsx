@@ -2,9 +2,9 @@ import { Head } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 import { toast } from 'sonner';
 import {
-    customersPage,
-    customersTemplate,
-    customersUpload,
+    suppliersPage,
+    suppliersTemplate,
+    suppliersUpload,
 } from '@/actions/App/Http/Controllers/DataLoaderController';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,10 +20,10 @@ import { useCsvImport } from '@/hooks/use-csv-import';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 
-export default function CustomerDataLoad() {
+export default function SupplierDataLoad() {
     const { importId, importStatus, submitFile, uploading } = useCsvImport({
-        uploadUrl: customersUpload.url(),
-        sessionStorageKey: 'bm_customer_data_import_id',
+        uploadUrl: suppliersUpload.url(),
+        sessionStorageKey: 'bm_supplier_data_import_id',
     });
 
     const onSubmitFile = async (e: FormEvent<HTMLFormElement>) => {
@@ -50,11 +50,11 @@ export default function CustomerDataLoad() {
 
     return (
         <>
-            <Head title="Customer data load" />
+            <Head title="Supplier data load" />
             <div className="flex flex-1 flex-col gap-6 p-4">
                 <div>
                     <h1 className="text-2xl font-semibold tracking-tight">
-                        Customer data load
+                        Supplier data load
                     </h1>
                     <p className="text-muted-foreground text-sm">
                         Download the template, fill in your rows, then upload a
@@ -66,14 +66,15 @@ export default function CustomerDataLoad() {
                     <CardHeader>
                         <CardTitle>Template</CardTitle>
                         <CardDescription>
-                            The first row must match these columns: full_name,
-                            organization_name, phone_country_name, phone_number,
-                            email, address, tax_id.
+                            The first row must match these columns:
+                            contact_person_name, company_name, phone, email,
+                            address, category. For category use one of: OEM,
+                            Aftermarket, Other.
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Button variant="outline" asChild>
-                            <a href={customersTemplate.url()} download>
+                            <a href={suppliersTemplate.url()} download>
                                 Download CSV template
                             </a>
                         </Button>
@@ -169,12 +170,12 @@ export default function CustomerDataLoad() {
     );
 }
 
-CustomerDataLoad.layout = {
+SupplierDataLoad.layout = {
     breadcrumbs: [
         { title: 'Dashboard', href: dashboard.url() },
         {
-            title: 'Customer data load',
-            href: customersPage.url(),
+            title: 'Supplier data load',
+            href: suppliersPage.url(),
         },
     ],
 };
