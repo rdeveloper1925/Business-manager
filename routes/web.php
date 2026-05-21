@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DataLoaderController;
+use App\Http\Controllers\Inventory\InventoryController;
+use App\Http\Controllers\Inventory\InventoryTransactionController;
+use App\Http\Controllers\Inventory\PartController;
 use App\Http\Controllers\SupplierController;
 use Illuminate\Support\Facades\Route;
 
@@ -14,6 +17,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
     Route::resource('customers', CustomerController::class)->except(['create', 'edit']);
     Route::resource('suppliers', SupplierController::class);
+
+    Route::prefix('inventory')->name('inventory.')->group(function () {
+        Route::get('/', [InventoryController::class, 'index'])->name('dashboard');
+        Route::post('/adjust', [InventoryController::class, 'adjust'])->name('adjust');
+        Route::get('parts/search', [PartController::class, 'search'])->name('parts.search');
+        Route::resource('parts', PartController::class);
+        Route::resource('transactions', InventoryTransactionController::class)
+            ->only(['index', 'create', 'store', 'show']);
+    });
 
     Route::get('data-load/customers', [DataLoaderController::class, 'customersPage'])->name('data-load.customers');
     Route::get('data-load/customers/template', [DataLoaderController::class, 'customersTemplate'])->name('data-load.customers.template');
