@@ -1,8 +1,8 @@
 import { Link } from '@inertiajs/react';
 import AppLogo from '@/components/app-logo';
 import { LandingAuthShell } from '@/components/landing-auth-shell';
-import type { AuthLayoutProps } from '@/types';
 import { home } from '@/routes';
+import type { AuthLayoutProps } from '@/types';
 
 export default function AuthSimpleLayout({
     children,

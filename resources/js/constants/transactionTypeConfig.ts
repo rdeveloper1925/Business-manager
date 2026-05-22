@@ -5,9 +5,10 @@ import {
     ClipboardList,
     PackageX,
     RotateCcw,
-    SlidersHorizontal,
-    type LucideIcon,
+    SlidersHorizontal
+    
 } from 'lucide-react';
+import type {LucideIcon} from 'lucide-react';
 
 import type { TransactionTypeValue } from '@/types/inventory';
 

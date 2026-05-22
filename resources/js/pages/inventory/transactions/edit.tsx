@@ -1,65 +1,70 @@
 import { Head, Link } from '@inertiajs/react';
 
 import { AppPageShell } from '@/components/app-page-shell';
-import { TransactionForm } from '@/components/inventory/transaction-form';
+import { TransactionEditForm } from '@/components/inventory/transaction-edit-form';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
 import { dashboard as inventoryDashboard } from '@/routes/inventory';
 import {
     index as transactionsIndex,
+    show as transactionsShow,
 } from '@/routes/inventory/transactions';
 import type {
-    EnumOption,
     InventorySupplierOption,
-    TransactionPreselected,
+    InventoryTransaction,
 } from '@/types/inventory';
 
-export default function TransactionsCreate({
+export default function TransactionsEdit({
+    transaction,
     suppliers,
-    transactionTypes,
-    conditions,
-    preselected,
 }: {
+    transaction: InventoryTransaction;
     suppliers: InventorySupplierOption[];
-    transactionTypes: EnumOption[];
-    conditions: EnumOption[];
-    preselected: TransactionPreselected;
 }) {
+    const title =
+        transaction.part?.part_name ??
+        `Transaction #${transaction.transaction_id}`;
+
     return (
         <>
-            <Head title="New Transaction" />
+            <Head title={`Edit ${title}`} />
 
             <AppPageShell width="3xl">
                 <div className="flex flex-col gap-2">
                     <Button variant="outline" size="sm" className="w-fit" asChild>
-                        <Link href={transactionsIndex.url()} prefetch>
-                            ← Back to transactions
+                        <Link
+                            href={transactionsShow.url({
+                                transaction: transaction.transaction_id,
+                            })}
+                            prefetch
+                        >
+                            ← Back to transaction
                         </Link>
                     </Button>
                     <h1 className="text-2xl font-semibold tracking-tight">
-                        New transaction
+                        Edit transaction
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Record a stock movement for a part.
+                        Update unit cost, supplier, or notes for transaction #
+                        {transaction.transaction_id}.
                     </p>
                 </div>
 
-                <TransactionForm
+                <TransactionEditForm
+                    transaction={transaction}
                     suppliers={suppliers}
-                    transactionTypes={transactionTypes}
-                    conditions={conditions}
-                    preselected={preselected}
                 />
             </AppPageShell>
         </>
     );
 }
 
-TransactionsCreate.layout = {
+TransactionsEdit.layout = {
     breadcrumbs: [
         { title: 'Dashboard', href: dashboard.url() },
         { title: 'Inventory', href: inventoryDashboard.url() },
         { title: 'Transactions', href: transactionsIndex.url() },
-        { title: 'New Transaction', href: '#' },
+        { title: 'Transaction', href: '#' },
+        { title: 'Edit', href: '#' },
     ],
 };

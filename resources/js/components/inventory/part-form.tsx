@@ -3,10 +3,12 @@ import { useMemo, useState } from 'react';
 
 import PartController from '@/actions/App/Http/Controllers/Inventory/PartController';
 import InputError from '@/components/input-error';
+import { PartProfitProjection } from '@/components/inventory/part-profit-projection';
 import { SearchableSelect } from '@/components/searchable-select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { APP_CURRENCY } from '@/lib/format-currency';
 import { cn } from '@/lib/utils';
 import { index as partsIndex, show as partsShow } from '@/routes/inventory/parts';
 import type { InventorySupplierOption, Part } from '@/types/inventory';
@@ -16,6 +18,12 @@ const textareaClassName = cn(
     'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
     'aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive',
 );
+
+function labelWithUnit(base: string, unitOfMeasure: string): string {
+    const unit = unitOfMeasure.trim();
+
+    return unit !== '' ? `${base} (${unit})` : base;
+}
 
 function pickError(
     errors: Record<string, string | string[] | undefined>,
@@ -33,9 +41,11 @@ function pickError(
 export function PartForm({
     part,
     suppliers,
+    showProfitProjection = false,
 }: {
     part: Part | null;
     suppliers: InventorySupplierOption[];
+    showProfitProjection?: boolean;
 }) {
     const isEdit = part !== null;
     const idSuffix = isEdit ? part.part_id : 'new';
@@ -51,6 +61,17 @@ export function PartForm({
 
     const [supplierId, setSupplierId] = useState(
         isEdit && part.supplier_id !== null ? String(part.supplier_id) : '',
+    );
+
+    const [costPrice, setCostPrice] = useState(() =>
+        showProfitProjection && isEdit ? String(part.cost_price) : '',
+    );
+    const [sellPrice, setSellPrice] = useState(() =>
+        showProfitProjection && isEdit ? String(part.sell_price) : '',
+    );
+
+    const [unitOfMeasure, setUnitOfMeasure] = useState(() =>
+        isEdit ? part.unit_of_measure : '',
     );
 
     return (
@@ -137,8 +158,9 @@ export function PartForm({
                                         id={`unit_of_measure_${idSuffix}`}
                                         name="unit_of_measure"
                                         required
-                                        defaultValue={
-                                            isEdit ? part.unit_of_measure : undefined
+                                        value={unitOfMeasure}
+                                        onChange={(event) =>
+                                            setUnitOfMeasure(event.target.value)
                                         }
                                         aria-invalid={
                                             fieldError('unit_of_measure')
@@ -152,7 +174,7 @@ export function PartForm({
                                 </div>
                                 <div className="grid gap-2">
                                     <Label htmlFor={`cost_price_${idSuffix}`}>
-                                        Cost price
+                                        Cost price ({APP_CURRENCY})
                                     </Label>
                                     <Input
                                         id={`cost_price_${idSuffix}`}
@@ -161,9 +183,19 @@ export function PartForm({
                                         min="0"
                                         step="0.01"
                                         required
-                                        defaultValue={
-                                            isEdit ? part.cost_price : undefined
-                                        }
+                                        {...(showProfitProjection
+                                            ? {
+                                                  value: costPrice,
+                                                  onChange: (event) =>
+                                                      setCostPrice(
+                                                          event.target.value,
+                                                      ),
+                                              }
+                                            : {
+                                                  defaultValue: isEdit
+                                                      ? part.cost_price
+                                                      : undefined,
+                                              })}
                                         aria-invalid={
                                             fieldError('cost_price') ? true : undefined
                                         }
@@ -172,7 +204,7 @@ export function PartForm({
                                 </div>
                                 <div className="grid gap-2">
                                     <Label htmlFor={`sell_price_${idSuffix}`}>
-                                        Sell price
+                                        Sell price ({APP_CURRENCY})
                                     </Label>
                                     <Input
                                         id={`sell_price_${idSuffix}`}
@@ -181,9 +213,19 @@ export function PartForm({
                                         min="0"
                                         step="0.01"
                                         required
-                                        defaultValue={
-                                            isEdit ? part.sell_price : undefined
-                                        }
+                                        {...(showProfitProjection
+                                            ? {
+                                                  value: sellPrice,
+                                                  onChange: (event) =>
+                                                      setSellPrice(
+                                                          event.target.value,
+                                                      ),
+                                              }
+                                            : {
+                                                  defaultValue: isEdit
+                                                      ? part.sell_price
+                                                      : undefined,
+                                              })}
                                         aria-invalid={
                                             fieldError('sell_price') ? true : undefined
                                         }
@@ -191,6 +233,13 @@ export function PartForm({
                                     <InputError message={fieldError('sell_price')} />
                                 </div>
                             </div>
+
+                            {showProfitProjection && (
+                                <PartProfitProjection
+                                    costPrice={costPrice}
+                                    sellPrice={sellPrice}
+                                />
+                            )}
 
                             <div className="grid gap-2">
                                 <Label htmlFor={`supplier_${idSuffix}`}>Supplier</Label>
@@ -212,7 +261,10 @@ export function PartForm({
                             <div className="grid gap-2 sm:grid-cols-3">
                                 <div className="grid gap-2">
                                     <Label htmlFor={`reorder_point_${idSuffix}`}>
-                                        Reorder point
+                                        {labelWithUnit(
+                                            'Reorder point',
+                                            unitOfMeasure,
+                                        )}
                                     </Label>
                                     <Input
                                         id={`reorder_point_${idSuffix}`}
@@ -232,7 +284,10 @@ export function PartForm({
                                 </div>
                                 <div className="grid gap-2">
                                     <Label htmlFor={`min_stock_${idSuffix}`}>
-                                        Min stock level
+                                        {labelWithUnit(
+                                            'Min stock level',
+                                            unitOfMeasure,
+                                        )}
                                     </Label>
                                     <Input
                                         id={`min_stock_${idSuffix}`}
@@ -254,7 +309,10 @@ export function PartForm({
                                 </div>
                                 <div className="grid gap-2">
                                     <Label htmlFor={`max_stock_${idSuffix}`}>
-                                        Max stock level
+                                        {labelWithUnit(
+                                            'Max stock level',
+                                            unitOfMeasure,
+                                        )}
                                     </Label>
                                     <Input
                                         id={`max_stock_${idSuffix}`}

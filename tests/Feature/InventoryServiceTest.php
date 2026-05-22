@@ -10,7 +10,9 @@ use App\Enums\TransactionType;
 use App\Exceptions\Inventory\InsufficientStockException;
 use App\Exceptions\Inventory\InvalidTransactionException;
 use App\Models\Inventory;
+use App\Models\InventoryTransaction;
 use App\Models\Part;
+use App\Models\Supplier;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -206,6 +208,57 @@ class InventoryServiceTest extends TestCase
             ),
             $user,
         );
+    }
+
+    public function test_record_transaction_uses_part_supplier_for_restock_when_missing(): void
+    {
+        $user = User::factory()->create();
+        $supplier = Supplier::factory()->create();
+        $part = $this->createPart(['supplier_id' => $supplier->id]);
+        $this->createInventory($part, quantityOnHand: 10);
+
+        $transaction = $this->inventoryService->recordTransaction(
+            $this->transactionData(
+                $part->part_id,
+                qtyDelta: 3,
+                transactionType: TransactionType::Restock,
+            ),
+            $user,
+        );
+
+        $this->assertSame($supplier->id, $transaction->supplier_id);
+    }
+
+    public function test_update_transaction_changes_metadata_and_performed_by_only(): void
+    {
+        $creator = User::factory()->create();
+        $editor = User::factory()->create();
+        $part = $this->createPart();
+        $this->createInventory($part, quantityOnHand: 10);
+        $transaction = InventoryTransaction::factory()->create([
+            'part_id' => $part->part_id,
+            'performed_by' => $creator->id,
+            'qty_delta' => -2,
+            'qty_after' => 8,
+            'unit_cost' => '2.00',
+            'notes' => 'Before',
+        ]);
+
+        $updated = $this->inventoryService->updateTransaction(
+            $transaction,
+            unitCost: 9.99,
+            supplierId: null,
+            notes: 'After',
+            performedBy: $editor,
+        );
+
+        $this->assertSame($editor->id, $updated->performed_by);
+        $this->assertEquals(9.99, (float) $updated->unit_cost);
+        $this->assertNull($updated->supplier_id);
+        $this->assertSame('After', $updated->notes);
+        $this->assertSame(-2, $updated->qty_delta);
+        $this->assertSame(8, $updated->qty_after);
+        $this->assertSame(10, Inventory::query()->where('part_id', $part->part_id)->value('quantity_on_hand'));
     }
 
     public function test_restock_does_not_drive_quantity_on_order_below_zero(): void

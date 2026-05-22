@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import InventoryTransactionController from '@/actions/App/Http/Controllers/Inventory/InventoryTransactionController';
 import InputError from '@/components/input-error';
+import { FormFieldFooter } from '@/components/form-field-footer';
 import { SearchableSelect } from '@/components/searchable-select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,6 +17,12 @@ import {
 } from '@/components/ui/select';
 import { transactionTypeConfig } from '@/constants/transactionTypeConfig';
 import { toDatetimeLocalValue } from '@/lib/datetime-local';
+import {
+    effectiveQtyDelta,
+    getQtyDeltaSignMode,
+    qtyDeltaFieldHelper,
+    qtyDeltaFieldLabel,
+} from '@/lib/transaction-qty-delta';
 import { cn } from '@/lib/utils';
 import { search as partsSearch } from '@/routes/inventory/parts';
 import { index as transactionsIndex } from '@/routes/inventory/transactions';
@@ -95,8 +102,9 @@ export function TransactionForm({
     const [transactionType, setTransactionType] = useState<TransactionTypeValue>(
         preselected.transaction_type ?? 'RESTOCK',
     );
-    const [qtyDeltaInput, setQtyDeltaInput] = useState('0');
+    const [qtyDeltaInput, setQtyDeltaInput] = useState('1');
     const [supplierId, setSupplierId] = useState('');
+    const [supplierTouched, setSupplierTouched] = useState(false);
     const [condition, setCondition] = useState('GOOD');
 
     const partOptions = useMemo(
@@ -122,11 +130,38 @@ export function TransactionForm({
     );
     const currentStock = selectedPart?.quantity_on_hand ?? 0;
     const reorderPoint = selectedPart?.reorder_point ?? 0;
-    const qtyDelta = Number.parseInt(qtyDeltaInput, 10) || 0;
+    const qtyDeltaSignMode = getQtyDeltaSignMode(transactionType);
+    const qtyDelta = effectiveQtyDelta(transactionType, qtyDeltaInput);
     const qtyAfter = currentStock + qtyDelta;
 
     const showSupplier =
         transactionType === 'RESTOCK' || transactionType === 'RETURN';
+
+    useEffect(() => {
+        setSupplierTouched(false);
+    }, [partId]);
+
+    useEffect(() => {
+        if (!showSupplier) {
+            setSupplierId('');
+
+            return;
+        }
+
+        if (supplierTouched) {
+            return;
+        }
+
+        if (selectedPart?.supplier_id) {
+            setSupplierId(String(selectedPart.supplier_id));
+        } else {
+            setSupplierId('');
+        }
+    }, [
+        showSupplier,
+        selectedPart?.supplier_id,
+        supplierTouched,
+    ]);
 
     const previewTone =
         qtyAfter < 0
@@ -256,15 +291,24 @@ export function TransactionForm({
                                 </div>
                             </div>
 
-                            <div className="grid gap-2 sm:grid-cols-2">
+                            <div className="grid gap-4 sm:grid-cols-2 sm:items-start">
                                 <div className="grid gap-2">
-                                    <Label htmlFor="qty_delta">Qty delta</Label>
+                                    <Label htmlFor="qty_delta">
+                                        {qtyDeltaFieldLabel(transactionType)}
+                                    </Label>
                                     <Input
                                         id="qty_delta"
                                         name="qty_delta"
                                         type="number"
                                         required
                                         value={qtyDeltaInput}
+                                        min={
+                                            qtyDeltaSignMode === 'stocktake'
+                                                ? undefined
+                                                : qtyDeltaSignMode === 'either'
+                                                  ? undefined
+                                                  : '1'
+                                        }
                                         onChange={(event) =>
                                             setQtyDeltaInput(event.target.value)
                                         }
@@ -272,7 +316,12 @@ export function TransactionForm({
                                             fieldError('qty_delta') ? true : undefined
                                         }
                                     />
-                                    <InputError message={fieldError('qty_delta')} />
+                                    <FormFieldFooter
+                                        helper={qtyDeltaFieldHelper(
+                                            transactionType,
+                                        )}
+                                        error={fieldError('qty_delta')}
+                                    />
                                 </div>
                                 <div className="grid gap-2">
                                     <Label htmlFor="unit_cost">Unit cost</Label>
@@ -286,7 +335,9 @@ export function TransactionForm({
                                             fieldError('unit_cost') ? true : undefined
                                         }
                                     />
-                                    <InputError message={fieldError('unit_cost')} />
+                                    <FormFieldFooter
+                                        error={fieldError('unit_cost')}
+                                    />
                                 </div>
                             </div>
 
@@ -300,7 +351,10 @@ export function TransactionForm({
                                         name="supplier_id"
                                         options={supplierOptions}
                                         value={supplierId}
-                                        onValueChange={setSupplierId}
+                                        onValueChange={(value) => {
+                                            setSupplierTouched(true);
+                                            setSupplierId(value);
+                                        }}
                                         placeholder="Select supplier (optional)"
                                         searchPlaceholder="Search suppliers…"
                                         aria-invalid={

@@ -77,8 +77,8 @@ export default function SuppliersIndex({
 
                 <div className="landing-surface overflow-hidden rounded-xl border shadow-sm shadow-black/5">
                     {emptyDatabase ? (
-                        <div className="flex flex-col items-center gap-4 p-8">
-                            <p className="text-center text-sm text-muted-foreground">
+                        <div className="flex flex-col items-start gap-4 p-8">
+                            <p className="text-sm text-muted-foreground">
                                 No suppliers yet. Create one to get started.
                             </p>
                             <Button type="button" asChild>
@@ -88,7 +88,7 @@ export default function SuppliersIndex({
                             </Button>
                         </div>
                     ) : noSearchResults ? (
-                        <p className="p-8 text-center text-sm text-muted-foreground">
+                        <p className="p-8 text-sm text-muted-foreground">
                             No suppliers match your search.
                         </p>
                     ) : (

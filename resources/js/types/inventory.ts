@@ -59,6 +59,7 @@ export type Part = PartSummary & {
 export type InventoryTransactionSummary = {
     transaction_id: number;
     part_id: number;
+    supplier_id: number | null;
     transaction_type: TransactionTypeValue;
     qty_delta: number;
     qty_after: number;
@@ -81,6 +82,7 @@ export type PartFilterOption = {
 
 export type PartOption = PartFilterOption & {
     reorder_point: number;
+    supplier_id: number | null;
     quantity_on_hand: number;
 };
 

@@ -1,14 +1,6 @@
 import { Link } from '@inertiajs/react';
 
 import { TransactionTypeBadge } from '@/components/inventory/transaction-type-badge';
-import { getTransactionTypeConfig } from '@/constants/transactionTypeConfig';
-import {
-    formatCondition,
-    formatDelta,
-    formatInventoryDate,
-} from '@/lib/inventory-format';
-import { cn } from '@/lib/utils';
-import { show as transactionShow } from '@/routes/inventory/transactions';
 import {
     Table,
     TableBody,
@@ -17,6 +9,14 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { getTransactionTypeConfig } from '@/constants/transactionTypeConfig';
+import {
+    formatCondition,
+    formatDelta,
+    formatInventoryDate,
+} from '@/lib/inventory-format';
+import { cn } from '@/lib/utils';
+import { show as transactionShow } from '@/routes/inventory/transactions';
 import type { InventoryTransactionSummary } from '@/types/inventory';
 
 export function TransactionHistoryTable({

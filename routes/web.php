@@ -24,7 +24,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('parts/search', [PartController::class, 'search'])->name('parts.search');
         Route::resource('parts', PartController::class);
         Route::resource('transactions', InventoryTransactionController::class)
-            ->only(['index', 'create', 'store', 'show']);
+            ->only(['index', 'create', 'store', 'show', 'edit', 'update']);
     });
 
     Route::get('data-load/customers', [DataLoaderController::class, 'customersPage'])->name('data-load.customers');

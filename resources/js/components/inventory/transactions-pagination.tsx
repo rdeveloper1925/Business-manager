@@ -15,10 +15,10 @@ export function TransactionsPagination({
 
     return (
         <nav
-            className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center"
+            className="flex flex-col items-start gap-3 sm:flex-row sm:justify-start"
             aria-label="Pagination"
         >
-            <div className="flex flex-wrap items-center justify-center gap-1">
+            <div className="flex flex-wrap items-center justify-start gap-1">
                 {transactions.links.map((link, index) => {
                     if (link.label === '...') {
                         return (

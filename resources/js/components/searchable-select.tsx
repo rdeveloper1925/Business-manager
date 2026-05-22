@@ -96,6 +96,7 @@ export function SearchableSelect({
                 className="w-full justify-between font-normal"
                 onClick={() => {
                     setOpen((current) => !current);
+
                     if (!open) {
                         setSearch('');
                     }

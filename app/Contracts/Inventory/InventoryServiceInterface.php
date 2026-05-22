@@ -14,6 +14,14 @@ interface InventoryServiceInterface
 {
     public function recordTransaction(RecordTransactionData $data, User $performedBy): InventoryTransaction;
 
+    public function updateTransaction(
+        InventoryTransaction $transaction,
+        ?float $unitCost,
+        ?int $supplierId,
+        ?string $notes,
+        User $performedBy,
+    ): InventoryTransaction;
+
     public function adjustInventory(AdjustInventoryData $data, User $performedBy): void;
 
     /**

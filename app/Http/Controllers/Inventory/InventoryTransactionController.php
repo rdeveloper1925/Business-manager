@@ -11,6 +11,7 @@ use App\Exceptions\Inventory\InvalidTransactionException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Inventory\IndexInventoryTransactionsRequest;
 use App\Http\Requests\Inventory\StoreInventoryTransactionRequest;
+use App\Http\Requests\Inventory\UpdateInventoryTransactionRequest;
 use App\Models\InventoryTransaction;
 use App\Models\Part;
 use App\Models\Supplier;
@@ -134,6 +135,39 @@ final class InventoryTransactionController extends Controller
         return Inertia::render('inventory/transactions/show', [
             'transaction' => $transaction,
         ]);
+    }
+
+    public function edit(InventoryTransaction $transaction): Response
+    {
+        $this->authorize('update', $transaction);
+
+        $transaction->load(['part', 'performer', 'supplier']);
+
+        return Inertia::render('inventory/transactions/edit', [
+            'transaction' => $transaction,
+            'suppliers' => Supplier::query()->orderBy('company_name')->get(['id', 'company_name']),
+        ]);
+    }
+
+    public function update(
+        UpdateInventoryTransactionRequest $request,
+        InventoryTransaction $transaction,
+    ): RedirectResponse {
+        $this->authorize('update', $transaction);
+
+        $validated = $request->validated();
+
+        $this->inventoryService->updateTransaction(
+            $transaction,
+            isset($validated['unit_cost']) ? (float) $validated['unit_cost'] : null,
+            isset($validated['supplier_id']) ? (int) $validated['supplier_id'] : null,
+            $validated['notes'] ?? null,
+            $request->user(),
+        );
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => __('Transaction updated.')]);
+
+        return to_route('inventory.transactions.show', $transaction);
     }
 
     /**

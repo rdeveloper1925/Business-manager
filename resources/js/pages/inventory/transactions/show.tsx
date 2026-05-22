@@ -4,7 +4,10 @@ import { TransactionDetailCard } from '@/components/inventory/transaction-detail
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
 import { dashboard as inventoryDashboard } from '@/routes/inventory';
-import { index as transactionsIndex } from '@/routes/inventory/transactions';
+import {
+    edit as transactionsEdit,
+    index as transactionsIndex,
+} from '@/routes/inventory/transactions';
 import type { InventoryTransaction } from '@/types/inventory';
 
 export default function TransactionsShow({
@@ -35,6 +38,16 @@ export default function TransactionsShow({
                             </p>
                         </div>
                     </div>
+                    <Button asChild>
+                        <Link
+                            href={transactionsEdit.url({
+                                transaction: transaction.transaction_id,
+                            })}
+                            prefetch
+                        >
+                            Edit
+                        </Link>
+                    </Button>
                 </div>
 
                 <TransactionDetailCard transaction={transaction} />

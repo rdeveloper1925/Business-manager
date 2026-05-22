@@ -1,3 +1,5 @@
+export const APP_CURRENCY = 'CAD';
+
 export function formatCurrency(value: string | number | null | undefined): string {
     if (value === null || value === undefined || value === '') {
         return '—';
@@ -9,9 +11,9 @@ export function formatCurrency(value: string | number | null | undefined): strin
         return '—';
     }
 
-    return new Intl.NumberFormat(undefined, {
+    return new Intl.NumberFormat('en-CA', {
         style: 'currency',
-        currency: 'USD',
+        currency: APP_CURRENCY,
         minimumFractionDigits: 2,
         maximumFractionDigits: 2,
     }).format(amount);

@@ -29,12 +29,30 @@ final class InventoryService implements InventoryServiceInterface
     public function recordTransaction(RecordTransactionData $data, User $performedBy): InventoryTransaction
     {
         return DB::transaction(function () use ($data, $performedBy): InventoryTransaction {
-            $this->partModel->newQuery()->findOrFail($data->partId);
+            $part = $this->partModel->newQuery()->findOrFail($data->partId);
+            $data = $this->resolveSupplierForTransaction($data, $part);
 
             $inventory = $this->lockInventoryForPart($data->partId);
 
             return $this->persistTransaction($inventory, $data, $performedBy);
         });
+    }
+
+    public function updateTransaction(
+        InventoryTransaction $transaction,
+        ?float $unitCost,
+        ?int $supplierId,
+        ?string $notes,
+        User $performedBy,
+    ): InventoryTransaction {
+        $transaction->update([
+            'unit_cost' => $unitCost,
+            'supplier_id' => $supplierId,
+            'notes' => $notes,
+            'performed_by' => $performedBy->getKey(),
+        ]);
+
+        return $transaction->refresh();
     }
 
     public function adjustInventory(AdjustInventoryData $data, User $performedBy): void
@@ -209,5 +227,33 @@ final class InventoryService implements InventoryServiceInterface
     private function applyDelta(Inventory $inventory, int $delta): void
     {
         $inventory->increment('quantity_on_hand', $delta);
+    }
+
+    private function resolveSupplierForTransaction(RecordTransactionData $data, Part $part): RecordTransactionData
+    {
+        if ($data->supplierId !== null) {
+            return $data;
+        }
+
+        if (! in_array($data->transactionType, [TransactionType::Restock, TransactionType::Return], true)) {
+            return $data;
+        }
+
+        if ($part->supplier_id === null) {
+            return $data;
+        }
+
+        return new RecordTransactionData(
+            partId: $data->partId,
+            transactionType: $data->transactionType,
+            qtyDelta: $data->qtyDelta,
+            condition: $data->condition,
+            transactedAt: $data->transactedAt,
+            supplierId: $part->supplier_id,
+            referenceId: $data->referenceId,
+            referenceType: $data->referenceType,
+            unitCost: $data->unitCost,
+            notes: $data->notes,
+        );
     }
 }

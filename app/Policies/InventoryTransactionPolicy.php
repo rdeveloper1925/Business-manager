@@ -24,4 +24,9 @@ class InventoryTransactionPolicy
     {
         return true;
     }
+
+    public function update(User $user, InventoryTransaction $inventoryTransaction): bool
+    {
+        return true;
+    }
 }

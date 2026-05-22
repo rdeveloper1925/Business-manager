@@ -1,13 +1,5 @@
-import { getTransactionTypeConfig } from '@/constants/transactionTypeConfig';
 import { TransactionRowActions } from '@/components/inventory/transaction-row-actions';
 import { TransactionTypeBadge } from '@/components/inventory/transaction-type-badge';
-import {
-    formatCondition,
-    formatDelta,
-    formatInventoryDate,
-} from '@/lib/inventory-format';
-import { formatCurrency } from '@/lib/format-currency';
-import { cn } from '@/lib/utils';
 import {
     Table,
     TableBody,
@@ -16,6 +8,14 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { getTransactionTypeConfig } from '@/constants/transactionTypeConfig';
+import { formatCurrency } from '@/lib/format-currency';
+import {
+    formatCondition,
+    formatDelta,
+    formatInventoryDate,
+} from '@/lib/inventory-format';
+import { cn } from '@/lib/utils';
 import type { InventoryTransactionSummary } from '@/types/inventory';
 
 export function TransactionsTable({

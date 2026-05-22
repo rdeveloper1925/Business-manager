@@ -1,5 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 
+import { AppPageShell } from '@/components/app-page-shell';
 import { PartForm } from '@/components/inventory/part-form';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
@@ -18,7 +19,7 @@ export default function PartsEdit({
         <>
             <Head title={`Edit ${part.part_name}`} />
 
-            <div className="mx-auto flex max-w-3xl flex-col gap-6 p-4">
+            <AppPageShell width="3xl">
                 <div className="flex flex-col gap-2">
                     <Button variant="outline" size="sm" className="w-fit" asChild>
                         <Link
@@ -36,8 +37,12 @@ export default function PartsEdit({
                     </p>
                 </div>
 
-                <PartForm part={part} suppliers={suppliers} />
-            </div>
+                <PartForm
+                    part={part}
+                    suppliers={suppliers}
+                    showProfitProjection
+                />
+            </AppPageShell>
         </>
     );
 }

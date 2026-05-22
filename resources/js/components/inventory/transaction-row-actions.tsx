@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Eye } from 'lucide-react';
+import { Eye, Pencil } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -7,7 +7,10 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { show as transactionsShow } from '@/routes/inventory/transactions';
+import {
+    edit as transactionsEdit,
+    show as transactionsShow,
+} from '@/routes/inventory/transactions';
 import type { InventoryTransactionSummary } from '@/types/inventory';
 
 export function TransactionRowActions({
@@ -40,6 +43,26 @@ export function TransactionRowActions({
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent>View</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={`Edit ${label}`}
+                        asChild
+                    >
+                        <Link
+                            href={transactionsEdit.url({ transaction: id })}
+                            prefetch
+                            preserveScroll
+                        >
+                            <Pencil className="size-4" />
+                        </Link>
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>Edit</TooltipContent>
             </Tooltip>
         </div>
     );

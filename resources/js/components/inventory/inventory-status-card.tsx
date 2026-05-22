@@ -1,5 +1,6 @@
 import { Boxes } from 'lucide-react';
 
+import { InventoryAdjustForm } from '@/components/inventory/inventory-adjust-form';
 import { Badge } from '@/components/ui/badge';
 import {
     Card,
@@ -11,7 +12,6 @@ import {
     resolveStockStatus,
     stockStatusBadgeVariant,
 } from '@/lib/stock-status';
-import { InventoryAdjustForm } from '@/components/inventory/inventory-adjust-form';
 import type { InventoryRecord, Part, StockSummary } from '@/types/inventory';
 
 export function InventoryStatusCard({

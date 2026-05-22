@@ -5,6 +5,7 @@ namespace App\Http\Requests\Inventory;
 use App\Enums\ConditionType;
 use App\Enums\TransactionType;
 use App\Rules\TransactionDeltaRule;
+use App\Support\Inventory\TransactionQtyDelta;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -22,8 +23,22 @@ class StoreInventoryTransactionRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         if ($this->has('qty_delta')) {
+            $qtyDelta = (int) $this->input('qty_delta');
+            $transactionTypeValue = $this->input('transaction_type');
+
+            if (is_string($transactionTypeValue)) {
+                try {
+                    $qtyDelta = TransactionQtyDelta::normalize(
+                        TransactionType::from($transactionTypeValue),
+                        $qtyDelta,
+                    );
+                } catch (\ValueError) {
+                    // Validation will reject invalid transaction_type.
+                }
+            }
+
             $this->merge([
-                'qty_delta' => (int) $this->input('qty_delta'),
+                'qty_delta' => $qtyDelta,
             ]);
         }
 

@@ -1,9 +1,9 @@
 import { Link } from '@inertiajs/react';
+import { ChevronRight, Database, Truck, Users } from 'lucide-react';
 import {
     customersPage,
     suppliersPage,
 } from '@/actions/App/Http/Controllers/DataLoaderController';
-import { ChevronRight, Database, Truck, Users } from 'lucide-react';
 
 import {
     Collapsible,

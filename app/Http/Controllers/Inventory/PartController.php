@@ -99,7 +99,7 @@ final class PartController extends Controller
             });
         }
 
-        $parts = $query->get(['part_id', 'part_name', 'part_number', 'reorder_point']);
+        $parts = $query->get(['part_id', 'part_name', 'part_number', 'reorder_point', 'supplier_id']);
 
         return response()->json(
             $parts->map(fn (Part $part): array => [
@@ -107,6 +107,7 @@ final class PartController extends Controller
                 'part_name' => $part->part_name,
                 'part_number' => $part->part_number,
                 'reorder_point' => $part->reorder_point,
+                'supplier_id' => $part->supplier_id,
                 'quantity_on_hand' => $part->inventory?->quantity_on_hand ?? 0,
             ])->values(),
         );

@@ -3,6 +3,7 @@ import { useState } from 'react';
 
 import SupplierController from '@/actions/App/Http/Controllers/SupplierController';
 import InputError from '@/components/input-error';
+import { AppPageShell } from '@/components/app-page-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -62,7 +63,7 @@ export default function SuppliersCreateEdit({
         <>
             <Head title={isEdit ? 'Edit supplier' : 'New supplier'} />
 
-            <div className="mx-auto flex max-w-xl flex-col gap-6 p-4">
+            <AppPageShell width="xl">
                 <div className="flex flex-col gap-2">
                     <Button variant="outline" size="sm" className="w-fit" asChild>
                         <Link
@@ -237,7 +238,7 @@ export default function SuppliersCreateEdit({
                         }}
                     </Form>
                 </div>
-            </div>
+            </AppPageShell>
         </>
     );
 }
